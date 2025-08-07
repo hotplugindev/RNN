@@ -75,6 +75,12 @@ pub struct TrainingConfig {
     pub data_augmentation: Option<DataAugmentationConfig>,
     /// Regularization settings
     pub regularization: RegularizationConfig,
+    /// Prefer GPU over CPU when available
+    pub prefer_gpu: bool,
+    /// Specific device ID to use (None for auto-select)
+    pub device_id: Option<usize>,
+    /// Use GPU acceleration for training
+    pub use_gpu: bool,
 }
 
 /// Learning rate scheduling strategies.
@@ -180,6 +186,9 @@ impl Default for TrainingConfig {
             mixed_precision: false,
             data_augmentation: None,
             regularization: RegularizationConfig::default(),
+            prefer_gpu: true,
+            device_id: None,
+            use_gpu: true,
         }
     }
 }

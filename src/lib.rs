@@ -33,10 +33,12 @@
 
 pub mod activation;
 pub mod error;
+// pub mod gpu;
+// pub mod io;
 pub mod layer;
 pub mod loss;
-pub mod network;
-pub mod optimizer;
+// pub mod network;
+// pub mod optimizer;
 pub mod training;
 pub mod utils;
 
@@ -49,12 +51,15 @@ pub use activation::ActivationFunction;
 pub use error::{NetworkError, Result};
 pub use layer::{Layer, LayerBuilder, LayerType};
 pub use loss::LossFunction;
-pub use network::{Network, NetworkBuilder};
-pub use optimizer::{Optimizer, OptimizerType};
+// pub use network::{Network, NetworkBuilder};
+// pub use optimizer::{Optimizer, OptimizerType};
 pub use training::{TrainingConfig, TrainingMethod};
 
 // Re-export GPU types for convenience
 pub use gpu::{GpuDataType, GpuDevice, GpuDeviceType, GpuManager, GpuTensor};
+
+#[cfg(any(feature = "cuda", feature = "opencl", feature = "rocm"))]
+pub use gpu::real_compute;
 
 // Re-export ndarray for users
 pub use ndarray::{Array1, Array2, ArrayView1, ArrayView2};

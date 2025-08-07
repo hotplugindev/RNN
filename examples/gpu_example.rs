@@ -1,7 +1,10 @@
-//! GPU acceleration example for the RNN library.
+//! GPU acceleration example with runtime detection and fallback.
 //!
-//! This example demonstrates how to use GPU acceleration for neural network training
-//! and inference across different GPU backends (CUDA, OpenCL, ROCm, Metal).
+//! This example demonstrates the new GPU detection system that:
+//! - Detects available GPU hardware at runtime
+//! - Falls back gracefully when drivers aren't available
+//! - Provides helpful warnings when GPU hardware is detected but not usable
+//! - Supports multiple GPU backends (CUDA, OpenCL, ROCm, Metal)
 
 use ndarray::Array2;
 use rnn::{
@@ -9,36 +12,44 @@ use rnn::{
 };
 
 fn main() -> Result<()> {
-    println!("🚀 RNN GPU Acceleration Example");
+    println!("RNN GPU Acceleration Example");
     println!("================================\n");
 
-    // Check GPU availability
+    // Check GPU backend availability with runtime detection
     check_gpu_availability();
 
-    // Create GPU manager and enumerate devices
+    // Create GPU manager with automatic backend detection
     let mut gpu_manager = GpuManager::new();
+
     println!("📱 Available GPU Devices:");
-    for (i, device) in gpu_manager.devices().iter().enumerate() {
-        println!(
-            "  {}. {} ({:?}) - {} MB",
-            i,
-            device.name,
-            device.device_type,
-            device.total_memory / (1024 * 1024)
-        );
+    if gpu_manager.devices().is_empty() {
+        println!("  No devices found");
+    } else {
+        for (i, device) in gpu_manager.devices().iter().enumerate() {
+            println!(
+                "  {}. {} ({:?}) - {} MB",
+                i,
+                device.name,
+                device.device_type,
+                device.total_memory / (1024 * 1024)
+            );
+        }
     }
     println!();
 
-    // Get default device
+    // Demonstrate device selection and fallback
     if let Some(default_device) = gpu_manager.default_device() {
         let device_name = default_device.name.clone();
         let device_id = default_device.id;
         println!("🎯 Using default device: {}", device_name);
         demonstrate_gpu_operations(&mut gpu_manager, device_id)?;
     } else {
-        println!("❌ No GPU devices available, falling back to CPU");
+        println!("❌ No devices available, this shouldn't happen as CPU is always available");
         demonstrate_cpu_fallback()?;
     }
+
+    // Show additional GPU information
+    demonstrate_gpu_capabilities(&gpu_manager);
 
     Ok(())
 }
@@ -48,7 +59,7 @@ fn check_gpu_availability() {
 
     println!(
         "  CUDA: {}",
-        if rnn::gpu::GpuManager::is_cuda_available() {
+        if rnn::GpuManager::is_cuda_available() {
             "✅ Available"
         } else {
             "❌ Not available"
@@ -57,28 +68,28 @@ fn check_gpu_availability() {
 
     println!(
         "  OpenCL: {}",
-        if cfg!(feature = "opencl") {
-            "✅ Compiled in"
+        if rnn::GpuManager::is_opencl_available() {
+            "✅ Available"
         } else {
-            "❌ Not compiled"
+            "❌ Not available"
         }
     );
 
     println!(
         "  Metal: {}",
-        if cfg!(feature = "metal") {
-            "✅ Compiled in"
+        if rnn::GpuManager::is_metal_available() {
+            "✅ Available"
         } else {
-            "❌ Not compiled"
+            "❌ Not available"
         }
     );
 
     println!(
         "  ROCm: {}",
-        if cfg!(feature = "rocm") {
-            "✅ Compiled in"
+        if rnn::GpuManager::is_rocm_available() {
+            "✅ Available"
         } else {
-            "❌ Not compiled"
+            "❌ Not available"
         }
     );
 
@@ -130,6 +141,12 @@ fn demonstrate_tensor_operations(
     let cpu_result = gpu_tensor.to_cpu(context)?;
     println!("  ✅ Successfully transferred back to CPU");
     println!("  CPU result shape: {:?}", cpu_result.shape());
+
+    // Show memory statistics
+    if let Ok(stats) = context.memory_stats() {
+        println!("  💾 Memory allocated: {} bytes", stats.allocated);
+        println!("  📊 Active allocations: {}", stats.allocation_count);
+    }
 
     Ok(())
 }
@@ -258,6 +275,70 @@ mod tests {
     }
 }
 
+/// Demonstrate GPU capabilities and device information
+fn demonstrate_gpu_capabilities(gpu_manager: &GpuManager) {
+    println!("\n🔧 GPU Capabilities Summary:");
+    println!("============================");
+
+    if gpu_manager.devices().is_empty() {
+        println!("  No devices available");
+        return;
+    }
+
+    for device in gpu_manager.devices() {
+        println!("\n  Device: {}", device.name);
+        println!("    Type: {:?}", device.device_type);
+        println!("    Vendor: {}", device.vendor);
+        println!(
+            "    Total Memory: {:.2} GB",
+            device.total_memory as f64 / (1024.0 * 1024.0 * 1024.0)
+        );
+        println!(
+            "    Available Memory: {:.2} GB",
+            device.available_memory as f64 / (1024.0 * 1024.0 * 1024.0)
+        );
+        println!("    Compute Units: {}", device.multiprocessor_count);
+        println!("    Max Work Group Size: {}", device.max_work_group_size);
+        println!("    Driver Version: {}", device.driver_version);
+        println!("    Available: {}", device.is_available);
+    }
+
+    // Runtime capability checks
+    println!("\n  Runtime Backend Support:");
+    println!(
+        "    CUDA: {}",
+        if rnn::GpuManager::is_cuda_available() {
+            "✅"
+        } else {
+            "❌"
+        }
+    );
+    println!(
+        "    OpenCL: {}",
+        if rnn::GpuManager::is_opencl_available() {
+            "✅"
+        } else {
+            "❌"
+        }
+    );
+    println!(
+        "    ROCm: {}",
+        if rnn::GpuManager::is_rocm_available() {
+            "✅"
+        } else {
+            "❌"
+        }
+    );
+    println!(
+        "    Metal: {}",
+        if rnn::GpuManager::is_metal_available() {
+            "✅"
+        } else {
+            "❌"
+        }
+    );
+}
+
 /// Performance benchmarking for GPU vs CPU operations
 #[cfg(feature = "benchmarks")]
 mod benchmarks {
@@ -287,16 +368,16 @@ mod benchmarks {
             let mut gpu_manager = GpuManager::new();
             if let Some(device) = gpu_manager.default_device() {
                 if device.device_type != rnn::gpu::GpuDeviceType::Generic {
-                    let context = gpu_manager.create_context(device.id)?;
+                    if let Ok(mut context) = gpu_manager.create_context(device.id) {
+                        let start = Instant::now();
+                        let _gpu_a = rnn::gpu::GpuTensor::from_cpu(&a, device.id, context)?;
+                        let _gpu_b = rnn::gpu::GpuTensor::from_cpu(&b, device.id, context)?;
 
-                    let start = Instant::now();
-                    let gpu_a = rnn::gpu::GpuTensor::from_cpu(&a, device.id, context)?;
-                    let gpu_b = rnn::gpu::GpuTensor::from_cpu(&b, device.id, context)?;
+                        // Note: Actual matrix multiplication would be implemented here
+                        let transfer_time = start.elapsed();
 
-                    // Note: Actual matrix multiplication would be implemented here
-                    let transfer_time = start.elapsed();
-
-                    println!("    GPU transfer time: {:?}", transfer_time);
+                        println!("    GPU transfer time: {:?}", transfer_time);
+                    }
                 }
             }
         }
