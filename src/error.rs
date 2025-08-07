@@ -56,12 +56,10 @@ pub enum NetworkError {
     Numerical { message: String },
 
     /// GPU-related errors
-    #[cfg(feature = "gpu")]
     #[error("GPU error: {message}")]
     Gpu { message: String },
 
     /// CUDA-specific errors
-    #[cfg(feature = "cuda")]
     #[error("CUDA error: {message}")]
     Cuda { message: String },
 
@@ -171,7 +169,6 @@ impl NetworkError {
     }
 
     /// Create a new GPU error
-    #[cfg(feature = "gpu")]
     pub fn gpu<S: Into<String>>(message: S) -> Self {
         Self::Gpu {
             message: message.into(),
@@ -179,7 +176,6 @@ impl NetworkError {
     }
 
     /// Create a new CUDA error
-    #[cfg(feature = "cuda")]
     pub fn cuda<S: Into<String>>(message: S) -> Self {
         Self::Cuda {
             message: message.into(),
@@ -279,9 +275,7 @@ impl NetworkError {
             Self::DimensionMismatch { .. } => "DimensionMismatch",
             Self::InvalidParameter { .. } => "InvalidParameter",
             Self::Numerical { .. } => "Numerical",
-            #[cfg(feature = "gpu")]
             Self::Gpu { .. } => "GPU",
-            #[cfg(feature = "cuda")]
             Self::Cuda { .. } => "CUDA",
             #[cfg(feature = "blas")]
             Self::LinearAlgebra { .. } => "LinearAlgebra",

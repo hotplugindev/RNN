@@ -84,7 +84,7 @@ use rnn::{
 use ndarray::Array2;
 
 // Create training data
-let train_data = Array2::from_shape_vec((100, 2), 
+let train_data = Array2::from_shape_vec((100, 2),
     (0..200).map(|x| x as f64 / 100.0).collect())?;
 let train_targets = Array2::from_shape_vec((100, 1),
     train_data.rows().into_iter()
@@ -242,11 +242,11 @@ let history = network.train(&train_data, &train_targets, &config)?;
 use rnn::utils::DataPreprocessing;
 
 // Normalization
-let (normalized_data, min_vals, max_vals) = 
+let (normalized_data, min_vals, max_vals) =
     DataPreprocessing::min_max_normalize(&raw_data)?;
 
 // Standardization (z-score)
-let (standardized_data, means, stds) = 
+let (standardized_data, means, stds) =
     DataPreprocessing::standardize(&raw_data)?;
 
 // One-hot encoding
@@ -254,7 +254,7 @@ let labels = Array1::from(vec![0, 1, 2, 1, 0]);
 let one_hot = DataPreprocessing::to_categorical(&labels, Some(3))?;
 
 // Train-test split
-let (train_data, test_data, train_targets, test_targets) = 
+let (train_data, test_data, train_targets, test_targets) =
     DataPreprocessing::train_test_split(&data, &targets, 0.2, true, Some(42))?;
 
 // Data augmentation
@@ -324,13 +324,13 @@ let mut gpu_context = GpuContext::new(0)?; // Use GPU device 0
 // Check GPU availability
 if GpuContext::is_cuda_available() {
     println!("CUDA is available!");
-    
+
     // Move tensors to GPU
     let gpu_tensor = GpuTensor::from_cpu(&cpu_data, 0)?;
-    
+
     // Perform GPU operations
     // ... GPU computation ...
-    
+
     // Move results back to CPU
     let result = gpu_tensor.to_cpu()?;
 }
@@ -447,10 +447,10 @@ at your option.
 ## 📞 Support
 
 - 📖 [Documentation](https://docs.rs/rnn)
-- 💬 [Discussions](https://github.com/yourusername/rnn/discussions)
-- 🐛 [Issues](https://github.com/yourusername/rnn/issues)
-- 📧 [Email](mailto:support@rnn-rs.org)
+- 💬 [Discussions](https://github.com/hotplugindev/rnn/discussions)
+- 🐛 [Issues](https://github.com/hotplugindev/rnn/issues)
+- 📧 [Email](mailto:mail@gberti.com)
 
 ---
 
-Made with ❤️ by the RNN team and [contributors](https://github.com/yourusername/rnn/graphs/contributors).
+Made with ❤️ by the RNN team and [contributors](https://github.com/hotplugindev/rnn/graphs/contributors).

@@ -40,7 +40,6 @@ pub mod optimizer;
 pub mod training;
 pub mod utils;
 
-#[cfg(feature = "gpu")]
 pub mod gpu;
 
 pub mod io;
@@ -53,6 +52,9 @@ pub use loss::LossFunction;
 pub use network::{Network, NetworkBuilder};
 pub use optimizer::{Optimizer, OptimizerType};
 pub use training::{TrainingConfig, TrainingMethod};
+
+// Re-export GPU types for convenience
+pub use gpu::{GpuDataType, GpuDevice, GpuDeviceType, GpuManager, GpuTensor};
 
 // Re-export ndarray for users
 pub use ndarray::{Array1, Array2, ArrayView1, ArrayView2};

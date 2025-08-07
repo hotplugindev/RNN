@@ -2,10 +2,10 @@
 name = "rnn"
 version = "0.1.0"
 edition = "2021"
-authors = ["Your Name <your.email@example.com>"]
+authors = ["Giona Berti <mail@gberti.com>"]
 description = "A high-performance neural network library for Rust with CPU and GPU support"
-license = "MIT OR Apache-2.0"
-repository = "https://github.com/yourusername/rnn"
+license = "MIT"
+repository = "https://github.com/hotplugindev/rnn"
 keywords = ["neural-network", "machine-learning", "deep-learning", "gpu", "cpu"]
 categories = ["science", "algorithms"]
 
@@ -20,10 +20,13 @@ ndarray-linalg = { version = "0.16", optional = true }
 blas-src = { version = "0.8", features = ["openblas"], optional = true }
 lapack-src = { version = "0.8", features = ["openblas"], optional = true }
 
-# GPU computation with CUDA/OpenCL (optional)
-# candle-core = { version = "0.3", optional = true }
-# candle-nn = { version = "0.3", optional = true }
-# tch = { version = "0.13", optional = true }
+# GPU computation backends (optional)
+cudarc = { version = "0.9", optional = true }
+ocl = { version = "0.19", optional = true }
+metal = { version = "0.24", optional = true }
+
+# Always required dependencies
+num_cpus = "1.0"
 
 # Serialization
 serde = { version = "1.0", features = ["derive"] }
@@ -62,8 +65,11 @@ proptest = "1.0"
 default = ["cpu"]
 cpu = []
 blas = ["ndarray-linalg", "blas-src", "lapack-src"]
-# gpu = ["candle-core", "candle-nn"]
-# cuda = ["gpu"]
+gpu = []
+cuda = ["gpu", "dep:cudarc"]
+opencl = ["gpu", "dep:ocl"]
+metal = ["gpu", "dep:metal"]
+rocm = ["gpu"]
 benchmarks = ["criterion"]
 
 [profile.release]
