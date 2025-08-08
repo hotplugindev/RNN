@@ -20,7 +20,7 @@ exclude = [
     "/notebooks/*",
     "/examples/large_file.rs",
     "examples/*",
-    "img/*.png",
+    "img/nns2.png",
 ]
 
 
