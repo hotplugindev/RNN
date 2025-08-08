@@ -9,6 +9,21 @@ repository = "https://github.com/hotplugindev/nnl"
 keywords = ["neural-network", "machine-learning", "deep-learning", "gpu", "cpu"]
 categories = ["science", "algorithms"]
 
+exclude = [
+    "/.gitignore",
+    "/target/*",
+    "*.mp4",
+    "*.png",
+    "*.jpg",
+    "*.zip",
+    "/data/*",
+    "/notebooks/*",
+    "/examples/large_file.rs",
+    "examples/*",
+    "img/*.png",
+]
+
+
 [lib]
 name = "nnl"
 path = "src/lib.rs"
