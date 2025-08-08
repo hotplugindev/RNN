@@ -7,7 +7,6 @@ A high-performance neural network library for Rust with comprehensive GPU and CP
 [![Crates.io](https://img.shields.io/crates/v/nnl.svg)](https://crates.io/crates/nnl)
 [![Documentation](https://docs.rs/nnl/badge.svg)](https://docs.rs/nnl)
 [![License](https://img.shields.io/badge/license-MIT%2FApache--2.0-blue.svg)](#license)
-[![Build Status](https://github.com/hotplugindev/nnl/workflows/CI/badge.svg)](https://github.com/hotplugindev/nnl/actions)
 
 ## Features
 
