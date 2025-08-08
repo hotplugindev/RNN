@@ -149,7 +149,7 @@ nnl = { version = "0.1.0", features = ["intel-mkl"] }
 
 NNL uses Vulkan compute shaders for GPU acceleration, which works on:
 - **AMD GPUs**: Radeon RX 400 series and newer
-- **NVIDIA GPUs**: GTX 900 series and newer  
+- **NVIDIA GPUs**: GTX 900 series and newer
 - **Intel GPUs**: Arc series and modern integrated graphics
 
 ## Examples
@@ -325,10 +325,9 @@ Performance comparison on common tasks (Intel i7-10700K, RTX 3060 via Vulkan):
 
 | Feature | Description | Dependencies |
 |---------|-------------|--------------|
-| `default` | CPU-optimized + examples | `["cpu-optimized", "examples"]` |
+| `default` | CPU-optimized + examples | `["cpu-optimized"]` |
 | `cpu-optimized` | OpenBLAS acceleration | `openblas-src` |
 | `intel-mkl` | Intel MKL acceleration | `intel-mkl-src` |
-| `examples` | Example binaries and utilities | `clap`, `image` |
 
 Note: Vulkan support is always enabled and does not require a feature flag.
 
@@ -416,7 +415,7 @@ cargo run --example xor_gpu
 ## Roadmap
 
 - [ ] **CUDA Support**: Native NVIDIA CUDA backend for better performance
-- [ ] **ROCm Support**: AMD ROCm backend for compute-focused workloads  
+- [ ] **ROCm Support**: AMD ROCm backend for compute-focused workloads
 - [ ] **Distributed Training**: Multi-GPU support
 - [ ] **Mobile Deployment**: ARM optimization and model quantization
 - [ ] **Web Assembly**: Browser-based inference

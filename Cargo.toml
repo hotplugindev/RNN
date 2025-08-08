@@ -99,10 +99,6 @@ anyhow = "1.0"
 log = "0.4"
 env_logger = "0.10"
 
-# Examples dependencies
-clap = { version = "4.4", features = ["derive"], optional = true }
-image = { version = "0.24", optional = true }
-
 # Additional dependencies for I/O and utilities
 chrono = { version = "0.4", features = ["serde"] }
 rmp-serde = "1.1"
@@ -114,12 +110,10 @@ approx = "0.5"
 tempfile = "3.8"
 
 [features]
-default = ["cpu-optimized", "examples"]
+default = ["cpu-optimized"]
 cpu-optimized = ["openblas-src"]
 intel-mkl = ["intel-mkl-src"]
-examples = ["clap", "image"]
 
 
 [package.metadata.docs.rs]
-features = ["all-backends", "examples"]
 rustdoc-args = ["--cfg", "docsrs"]
