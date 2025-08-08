@@ -26,6 +26,22 @@ name = "mnist_cnn"
 path = "examples/mnist_cnn.rs"
 
 [[example]]
+name = "simple_xor_cpu"
+path = "examples/simple_xor_cpu.rs"
+
+[[example]]
+name = "simple_xor_gpu"
+path = "examples/simple_xor_gpu.rs"
+
+[[example]]
+name = "mnist_dense_and_cnn_cpu"
+path = "examples/mnist_dense_and_cnn_cpu.rs"
+
+[[example]]
+name = "mnist_dense_and_cnn_gpu"
+path = "examples/mnist_dense_and_cnn_gpu.rs"
+
+[[example]]
 name = "basic_usage"
 path = "examples/basic_usage.rs"
 
@@ -43,10 +59,10 @@ rayon = "1.7"
 half = { version = "2.3", features = ["serde"] }
 bytemuck = { version = "1.14", features = ["derive"] }
 
-# GPU Computing
-wgpu = { version = "26.0.1", features = ["spirv"] }
-pollster = "0.3"
-futures = "0.3"
+# GPU Computing - Vulkan
+vulkano = { version = "0.34", features = ["serde"] }
+vulkano-shaders = "0.34"
+vulkano-util = "0.34"
 
 # CUDA support (optional)
 cudarc = { version = "0.10", features = ["f16"], optional = true }

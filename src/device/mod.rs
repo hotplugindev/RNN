@@ -23,8 +23,6 @@ pub enum DeviceType {
     Cuda,
     /// Vulkan compute shaders (AMD/Intel/NVIDIA)
     Vulkan,
-    /// WebGPU compute backend
-    WebGpu,
 }
 
 impl fmt::Display for DeviceType {
@@ -34,7 +32,6 @@ impl fmt::Display for DeviceType {
             #[cfg(feature = "cuda")]
             DeviceType::Cuda => write!(f, "CUDA"),
             DeviceType::Vulkan => write!(f, "Vulkan"),
-            DeviceType::WebGpu => write!(f, "WebGPU"),
         }
     }
 }
@@ -84,11 +81,6 @@ impl Device {
             return Ok(device);
         }
 
-        if let Ok(device) = Self::webgpu() {
-            log::info!("Selected WebGPU device: {}", device.info.name);
-            return Ok(device);
-        }
-
         // Fall back to CPU
         let device = Self::cpu()?;
         log::info!("Selected CPU device: {}", device.info.name);
@@ -120,13 +112,6 @@ impl Device {
     /// Create a Vulkan device
     pub fn vulkan() -> Result<Self> {
         let backend = Arc::new(gpu::VulkanBackend::new()?);
-        let info = backend.device_info()?;
-        Ok(Self::new(backend, info))
-    }
-
-    /// Create a WebGPU device
-    pub fn webgpu() -> Result<Self> {
-        let backend = Arc::new(gpu::WebGpuBackend::new()?);
         let info = backend.device_info()?;
         Ok(Self::new(backend, info))
     }
@@ -181,8 +166,21 @@ pub trait Backend {
     /// Allocate memory on device
     fn allocate(&self, size: usize) -> Result<Arc<dyn DeviceMemory>>;
 
+    /// Allocate uniform buffer on device
+    fn allocate_uniform(&self, size: usize) -> Result<Arc<dyn DeviceMemory>> {
+        // Default implementation delegates to regular allocate for backwards compatibility
+        self.allocate(size)
+    }
+
     /// Copy data from host to device
     fn copy_to_device(&self, data: &[f32], memory: &dyn DeviceMemory) -> Result<()>;
+
+    /// Copy u32 data from host to device (for uniform buffers)
+    fn copy_u32_to_device(&self, data: &[u32], memory: &dyn DeviceMemory) -> Result<()> {
+        // Default implementation converts u32 to f32 for backwards compatibility
+        let f32_data: Vec<f32> = data.iter().map(|&x| x as f32).collect();
+        self.copy_to_device(&f32_data, memory)
+    }
 
     /// Copy data from device to host
     fn copy_to_host(&self, memory: &dyn DeviceMemory, data: &mut [f32]) -> Result<()>;
@@ -195,11 +193,31 @@ pub trait Backend {
         outputs: &[&dyn DeviceMemory],
     ) -> Result<()>;
 
+    /// Execute a kernel with an optional uniform buffer
+    fn execute_kernel_with_uniform(
+        &self,
+        kernel: &dyn Kernel,
+        inputs: &[&dyn DeviceMemory],
+        outputs: &[&dyn DeviceMemory],
+        uniform: Option<&dyn DeviceMemory>,
+    ) -> Result<()> {
+        // Default implementation delegates to execute_kernel for backwards compatibility
+        if uniform.is_some() {
+            return Err(crate::error::RnnError::device(
+                "Uniform buffers not supported by this backend",
+            ));
+        }
+        self.execute_kernel(kernel, inputs, outputs)
+    }
+
     /// Synchronize all operations
     fn synchronize(&self) -> Result<()>;
 
     /// Check if backend is available
     fn is_available(&self) -> bool;
+
+    /// Downcast to any for type checking
+    fn as_any(&self) -> &dyn std::any::Any;
 }
 
 /// Device memory abstraction
@@ -251,10 +269,6 @@ pub mod utils {
             devices.push(vulkan.info().clone());
         }
 
-        if let Ok(webgpu) = Device::webgpu() {
-            devices.push(webgpu.info().clone());
-        }
-
         devices
     }
 
@@ -269,7 +283,6 @@ pub mod utils {
                 #[cfg(feature = "cuda")]
                 DeviceType::Cuda => Device::cuda()?,
                 DeviceType::Vulkan => Device::vulkan()?,
-                DeviceType::WebGpu => Device::webgpu()?,
             };
 
             let start = std::time::Instant::now();

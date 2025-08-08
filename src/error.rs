@@ -70,6 +70,10 @@ pub enum RnnError {
     /// Unsupported operation errors
     #[error("Unsupported operation: {message}")]
     UnsupportedError { message: String },
+
+    /// Invalid input errors
+    #[error("Invalid input: {message}")]
+    InvalidInputError { message: String },
 }
 
 impl RnnError {
@@ -133,6 +137,13 @@ impl RnnError {
     /// Create a new unsupported operation error
     pub fn unsupported<S: Into<String>>(message: S) -> Self {
         Self::UnsupportedError {
+            message: message.into(),
+        }
+    }
+
+    /// Create a new invalid input error
+    pub fn invalid_input<S: Into<String>>(message: S) -> Self {
+        Self::InvalidInputError {
             message: message.into(),
         }
     }

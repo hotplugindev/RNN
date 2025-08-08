@@ -23,16 +23,16 @@ pub type Shape = Vec<usize>;
 /// Multi-dimensional tensor with device support
 #[derive(Debug, Clone)]
 pub struct Tensor {
-    data: TensorData,
+    pub data: TensorData,
     shape: Shape,
-    device: Arc<Device>,
+    pub device: Arc<Device>,
     requires_grad: bool,
     grad: Option<Box<Tensor>>,
 }
 
 /// Internal tensor data representation
 #[derive(Debug, Clone)]
-enum TensorData {
+pub enum TensorData {
     /// Data stored on host (CPU)
     Host(ArrayD<f32>),
     /// Data stored on device (GPU)
@@ -312,62 +312,26 @@ impl Tensor {
     }
 
     /// Reshape tensor to new shape
+    /// Reshape tensor to new dimensions
     pub fn reshape(&self, new_shape: &[usize]) -> Result<Tensor> {
         let new_size = new_shape.iter().product::<usize>();
         if new_size != self.size() {
             return Err(RnnError::shape_mismatch(&[self.size()], &[new_size]));
         }
 
-        let data = self.to_vec()?;
-        Self::from_slice_on_device(&data, new_shape, (*self.device).clone())
+        // GPU-native reshape - just change shape metadata, no data copying needed
+        Ok(Tensor {
+            data: self.data.clone(),
+            shape: new_shape.to_vec(),
+            device: self.device.clone(),
+            requires_grad: self.requires_grad,
+            grad: self.grad.clone(),
+        })
     }
 
     /// Transpose tensor (swap last two dimensions)
     pub fn transpose(&self) -> Result<Tensor> {
-        if self.ndim() < 2 {
-            return Err(RnnError::tensor(
-                "Cannot transpose tensor with less than 2 dimensions",
-            ));
-        }
-
-        match &self.data {
-            TensorData::Host(_array) => {
-                let mut new_shape = self.shape.clone();
-                let last_idx = new_shape.len() - 1;
-                new_shape.swap(last_idx - 1, last_idx);
-
-                // For simplicity, convert to vec and back
-                // In a real implementation, we'd have optimized transpose operations
-                let data = self.to_vec()?;
-                let transposed_data = self.transpose_data(&data, &self.shape)?;
-                Self::from_slice_on_device(&transposed_data, &new_shape, (*self.device).clone())
-            }
-            TensorData::Device(_) => {
-                // For device tensors, we'd use specialized kernels
-                let host_tensor = self.to_host()?;
-                let transposed = host_tensor.transpose()?;
-                transposed.to_device((*self.device).clone())
-            }
-        }
-    }
-
-    /// Helper function for matrix transpose
-    fn transpose_data(&self, data: &[f32], shape: &[usize]) -> Result<Vec<f32>> {
-        if shape.len() != 2 {
-            return Err(RnnError::tensor("transpose_data only supports 2D tensors"));
-        }
-
-        let rows = shape[0];
-        let cols = shape[1];
-        let mut result = vec![0.0; data.len()];
-
-        for i in 0..rows {
-            for j in 0..cols {
-                result[j * rows + i] = data[i * cols + j];
-            }
-        }
-
-        Ok(result)
+        ops::transpose(self)
     }
 
     /// Element-wise addition
@@ -405,9 +369,16 @@ impl Tensor {
         self.scalar_op(scalar, ops::TensorOp::MulScalar)
     }
 
+    /// Element-wise square root
+    pub fn sqrt(&self) -> Result<Tensor> {
+        ops::sqrt(self)
+    }
+
     /// Sum all elements
     pub fn sum(&self) -> Result<f32> {
-        ops::reduce_sum(self)
+        let result_tensor = ops::reduce_sum(self, None)?;
+        let data = result_tensor.to_vec()?;
+        Ok(data[0])
     }
 
     /// Mean of all elements
@@ -418,12 +389,16 @@ impl Tensor {
 
     /// Maximum element
     pub fn max(&self) -> Result<f32> {
-        ops::reduce_max(self)
+        let result_tensor = ops::reduce_max(self, None)?;
+        let data = result_tensor.to_vec()?;
+        Ok(data[0])
     }
 
     /// Minimum element
     pub fn min(&self) -> Result<f32> {
-        ops::reduce_min(self)
+        let result_tensor = ops::reduce_min(self, None)?;
+        let data = result_tensor.to_vec()?;
+        Ok(data[0])
     }
 
     /// Apply activation function
@@ -461,9 +436,45 @@ impl Tensor {
     }
 
     /// Clone tensor data to new tensor
+    /// Clone tensor data (creates a new tensor with copied data)
     pub fn clone_data(&self) -> Result<Tensor> {
-        let data = self.to_vec()?;
-        Self::from_slice_on_device(&data, &self.shape, (*self.device).clone())
+        match &self.data {
+            TensorData::Device(memory) => {
+                // GPU-native clone using copy kernel
+                let new_memory = self.device.backend().allocate(self.size())?;
+
+                let backend = self.device.backend();
+                if backend
+                    .as_any()
+                    .downcast_ref::<crate::device::gpu::VulkanBackend>()
+                    .is_some()
+                {
+                    let kernel = crate::device::gpu::VulkanKernel::elementwise(
+                        "copy".to_string(),
+                        (self.size() * std::mem::size_of::<f32>() / std::mem::size_of::<f32>())
+                            as u32,
+                    );
+                    backend.execute_kernel(&kernel, &[memory.as_ref()], &[new_memory.as_ref()])?;
+                } else {
+                    // Fallback for other backends
+                    let data = self.to_vec()?;
+                    return Self::from_slice_on_device(&data, &self.shape, (*self.device).clone());
+                }
+
+                Ok(Tensor {
+                    data: TensorData::Device(new_memory),
+                    shape: self.shape.clone(),
+                    device: self.device.clone(),
+                    requires_grad: self.requires_grad,
+                    grad: self.grad.clone(),
+                })
+            }
+            TensorData::Host(_) => {
+                // CPU clone - use existing implementation
+                let data = self.to_vec()?;
+                Self::from_slice_on_device(&data, &self.shape, (*self.device).clone())
+            }
+        }
     }
 }
 

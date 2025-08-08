@@ -97,6 +97,10 @@ impl Backend for CpuBackend {
     fn is_available(&self) -> bool {
         true // CPU is always available
     }
+
+    fn as_any(&self) -> &dyn std::any::Any {
+        self
+    }
 }
 
 /// CPU memory implementation

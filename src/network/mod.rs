@@ -495,26 +495,100 @@ impl Network {
         self.layers
             .iter()
             .flat_map(|layer| {
-                layer
-                    .gradients()
-                    .into_iter()
-                    .map(|g| g.clone_data().unwrap())
+                layer.gradients().into_iter().map(|g| g.clone()) // Use clone() instead of clone_data() to avoid GPU-CPU transfer
             })
             .collect()
     }
 
     fn update_parameters(&mut self, params: Vec<Tensor>) -> Result<()> {
         let mut param_idx = 0;
+
+        // Collect device info to avoid borrowing conflicts
+        let device = self.device.clone();
+
         for layer in &mut self.layers {
             let mut layer_params = layer.parameters_mut();
             for param in layer_params.iter_mut() {
                 if param_idx < params.len() {
-                    let new_data = params[param_idx].to_vec()?;
-                    param.copy_from_slice(&new_data)?;
+                    let new_param = &params[param_idx];
+
+                    // Validate tensor compatibility
+                    if param.shape() != new_param.shape() {
+                        return Err(crate::error::RnnError::tensor(&format!(
+                            "Parameter shape mismatch: expected {:?}, got {:?}",
+                            param.shape(),
+                            new_param.shape()
+                        )));
+                    }
+
+                    if param.device().device_type() != new_param.device().device_type() {
+                        return Err(crate::error::RnnError::tensor(
+                            "Parameter and update tensor must be on same device type",
+                        ));
+                    }
+
+                    // Direct GPU memory copy for device tensors
+                    match (&param.data, &new_param.data) {
+                        (
+                            crate::tensor::TensorData::Device(dst_memory),
+                            crate::tensor::TensorData::Device(src_memory),
+                        ) => {
+                            // GPU to GPU copy - use static method
+                            Self::gpu_copy_tensor_data_static(
+                                src_memory.as_ref(),
+                                dst_memory.as_ref(),
+                                &device,
+                            )?;
+                        }
+                        (
+                            crate::tensor::TensorData::Host(_),
+                            crate::tensor::TensorData::Host(_),
+                        ) => {
+                            // CPU to CPU copy - use efficient memcpy
+                            let data = new_param.to_vec()?;
+                            param.copy_from_slice(&data)?;
+                        }
+                        _ => {
+                            // Mixed device types - fall back to host transfer
+                            let data = new_param.to_vec()?;
+                            param.copy_from_slice(&data)?;
+                        }
+                    }
+
                     param_idx += 1;
                 }
             }
         }
+        Ok(())
+    }
+
+    /// GPU-native tensor data copy without CPU transfers (static version)
+    fn gpu_copy_tensor_data_static(
+        src_memory: &dyn crate::device::DeviceMemory,
+        dst_memory: &dyn crate::device::DeviceMemory,
+        device: &crate::device::Device,
+    ) -> Result<()> {
+        let backend = device.backend();
+
+        // Use GPU copy kernel for efficient memory transfer
+        if backend
+            .as_any()
+            .downcast_ref::<crate::device::gpu::VulkanBackend>()
+            .is_some()
+        {
+            let kernel = crate::device::gpu::VulkanKernel::elementwise(
+                "copy".to_string(),
+                (src_memory.size() / std::mem::size_of::<f32>()) as u32,
+            );
+            backend.execute_kernel(&kernel, &[src_memory], &[dst_memory])?;
+        } else {
+            // Fallback for non-GPU backends
+            let data_size = src_memory.size() / std::mem::size_of::<f32>();
+            let mut temp_data = vec![0.0f32; data_size];
+            backend.copy_to_host(src_memory, &mut temp_data)?;
+            backend.copy_to_device(&temp_data, dst_memory)?;
+        }
+
         Ok(())
     }
 
