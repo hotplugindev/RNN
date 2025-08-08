@@ -2,17 +2,17 @@
 
 ![nnl Logo](https://raw.githubusercontent.com/hotplugindev/NNL/main/img/nnl.png)
 
-A high-performance neural network library for Rust with comprehensive GPU and CPU support.
+A high-performance neural network library for Rust with CPU and Vulkan GPU support.
 
 [![Crates.io](https://img.shields.io/crates/v/nnl.svg)](https://crates.io/crates/nnl)
 [![Documentation](https://docs.rs/nnl/badge.svg)](https://docs.rs/nnl)
-[![License](https://img.shields.io/badge/license-MIT%2FApache--2.0-blue.svg)](#license)
+[![License](https://img.shields.io/badge/license-MIT-blue.svg)](#license)
 
 ## Features
 
-- 🚀 **Multi-backend Support**: NVIDIA CUDA, AMD ROCm/Vulkan, and optimized CPU execution
-- 🎯 **Automatic Hardware Detection**: Seamlessly selects the best available compute backend
-- 🧠 **Advanced Optimizers**: Adam, SGD, AdaGrad, RMSprop, AdamW, LBFGS, and more
+- 🚀 **Dual Backend Support**: Optimized CPU execution and Vulkan compute shaders
+- 🎯 **Automatic Hardware Detection**: Seamlessly selects between CPU and Vulkan GPU
+- 🧠 **Advanced Optimizers**: Adam, SGD, and other optimization algorithms
 - 🏗️ **Flexible Architecture**: Dense layers, CNN, batch normalization, dropout, and custom layers
 - 💾 **Model Persistence**: Save/load models with metadata in multiple formats (Binary, JSON, MessagePack)
 - ⚡ **Production Ready**: SIMD optimizations, parallel processing, and zero-copy operations
@@ -104,12 +104,12 @@ fn main() -> Result<()> {
     let pred_11 = network.forward(&test_input_11)?.to_vec()?[0];
 
     // Print predictions, converting to binary (0 or 1)
-    println!(\"\\n--- XOR Predictions ---\");
-    println!(\"XOR(0,0) = {:.4} (class: {:.0})\", pred_00, if pred_00 > 0.5 { 1.0 } else { 0.0 });
-    println!(\"XOR(0,1) = {:.4} (class: {:.0})\", pred_01, if pred_01 > 0.5 { 1.0 } else { 0.0 });
-    println!(\"XOR(1,0) = {:.4} (class: {:.0})\", pred_10, if pred_10 > 0.5 { 1.0 } else { 0.0 });
-    println!(\"XOR(1,1) = {:.4} (class: {:.0})\", pred_11, if pred_11 > 0.5 { 1.0 } else { 0.0 });
-    println!(\"-------------------------\");
+    println!("\n--- XOR Predictions ---");
+    println!("XOR(0,0) = {:.4} (class: {:.0})", pred_00, if pred_00 > 0.5 { 1.0 } else { 0.0 });
+    println!("XOR(0,1) = {:.4} (class: {:.0})", pred_01, if pred_01 > 0.5 { 1.0 } else { 0.0 });
+    println!("XOR(1,0) = {:.4} (class: {:.0})", pred_10, if pred_10 > 0.5 { 1.0 } else { 0.0 });
+    println!("XOR(1,1) = {:.4} (class: {:.0})", pred_11, if pred_11 > 0.5 { 1.0 } else { 0.0 });
+    println!("-------------------------");
 
     Ok(())
 }
@@ -117,32 +117,40 @@ fn main() -> Result<()> {
 
 ## Installation
 
-### CPU-only (default)
+### CPU-only
 
 ```toml
 [dependencies]
 nnl = "0.1.0"
 ```
 
-### With GPU Support
+### With OpenBLAS optimization
 
 ```toml
 [dependencies]
-nnl = { version = "0.1.0", features = ["cuda"] }  # NVIDIA CUDA
-# or
-nnl = { version = "0.1.0", features = ["vulkan"] } # Vulkan (AMD/Intel/NVIDIA)
-# or
-nnl = { version = "0.1.0", features = ["all-backends"] } # All GPU backends
+nnl = { version = "0.1.0", features = ["cpu-optimized"] }
+```
+
+### With Intel MKL optimization
+
+```toml
+[dependencies]
+nnl = { version = "0.1.0", features = ["intel-mkl"] }
 ```
 
 ### System Requirements
 
-- **Rust**: 1.70 or later
+- **Rust**: 1.70 or later (edition 2024)
 - **CPU**: Any modern x86_64 or ARM64 processor
-- **GPU (optional)**:
-  - CUDA: NVIDIA GPU with compute capability 3.5+, CUDA 11.0+
-  - Vulkan: Any Vulkan 1.2+ compatible GPU
-  - ROCm: AMD GPU with ROCm 4.0+ (experimental)
+- **GPU (optional)**: Any Vulkan 1.2+ compatible GPU (AMD, Intel, NVIDIA)
+- **OS**: Linux, Windows, macOS
+
+### GPU Support
+
+NNL uses Vulkan compute shaders for GPU acceleration, which works on:
+- **AMD GPUs**: Radeon RX 400 series and newer
+- **NVIDIA GPUs**: GTX 900 series and newer  
+- **Intel GPUs**: Arc series and modern integrated graphics
 
 ## Examples
 
@@ -152,47 +160,65 @@ Run the included examples to see the library in action:
 # Basic XOR problem (CPU)
 cargo run --example xor
 
-# XOR with GPU acceleration
-cargo run --example xor_gpu --features cuda
+# XOR with GPU acceleration (if Vulkan GPU available)
+cargo run --example xor_gpu
 
 # MNIST digit classification
 cargo run --example mnist
+
+# MNIST with GPU
+cargo run --example mnist_gpu
 
 # Convolutional Neural Network
 cargo run --example simple_cnn
 
 # CNN with GPU support
-cargo run --example simple_cnn_gpu --features cuda
+cargo run --example simple_cnn_gpu
+
+# Small MNIST examples for testing
+cargo run --example mnist_small
+cargo run --example mnist_small_gpu
 ```
 
 ### Available Examples
 
-- [`xor.rs`](examples/xor.rs) - Solve XOR problem with a simple neural network
-- [`mnist.rs`](examples/mnist.rs) - MNIST handwritten digit classification
-- [`simple_cnn.rs`](examples/simple_cnn.rs) - Convolutional neural network example
-- GPU variants: `*_gpu.rs` - Same examples with GPU acceleration
+- [`xor.rs`](examples/xor.rs) - Solve XOR problem with a simple neural network (CPU)
+- [`xor_gpu.rs`](examples/xor_gpu.rs) - XOR with Vulkan GPU acceleration
+- [`mnist.rs`](examples/mnist.rs) - MNIST handwritten digit classification (CPU)
+- [`mnist_gpu.rs`](examples/mnist_gpu.rs) - MNIST with GPU acceleration
+- [`mnist_small.rs`](examples/mnist_small.rs) - Smaller MNIST dataset for testing (CPU)
+- [`mnist_small_gpu.rs`](examples/mnist_small_gpu.rs) - Small MNIST with GPU
+- [`simple_cnn.rs`](examples/simple_cnn.rs) - Convolutional neural network (CPU)
+- [`simple_cnn_gpu.rs`](examples/simple_cnn_gpu.rs) - CNN with GPU acceleration
 
 ## Core Concepts
 
 ### Device Management
 
 ```rust
-// Automatic device selection (CPU/GPU)
+// Automatic device selection (prefers GPU if available, falls back to CPU)
 let device = Device::auto_select()?;
 
 // Specific device types
 let cpu_device = Device::cpu()?;
-let cuda_device = Device::cuda(0)?;  // GPU 0
-let vulkan_device = Device::vulkan()?;
+let vulkan_device = Device::vulkan()?;  // May fail if no Vulkan GPU available
+
+// Check device capabilities
+println!("Device: {}", device.device_type());
+println!("Memory: {:?}", device.info().memory_size);
 ```
 
 ### Tensors
 
 ```rust
-// Create tensors
+// Create tensors (uses auto-selected device)
 let zeros = Tensor::zeros(&[3, 4])?;
 let ones = Tensor::ones(&[2, 2])?;
 let from_data = Tensor::from_slice(&[1.0, 2.0, 3.0], &[3])?;
+
+// Create tensors on specific device
+let device = Device::vulkan()?;
+let gpu_tensor = Tensor::from_slice_on_device(&[1.0, 2.0, 3.0], &[3], device)?;
 
 // Tensor operations
 let a = Tensor::randn(&[2, 3])?;
@@ -229,6 +255,7 @@ let network = NetworkBuilder::new()
         weight_decay: Some(1e-4),
         amsgrad: false,
     })
+    .device(Device::auto_select()?)  // Automatically choose best device
     .build()?;
 ```
 
@@ -239,26 +266,25 @@ let config = TrainingConfig {
     epochs: 100,
     batch_size: 32,
     verbose: true,
-    early_stopping_patience: 10,
+    early_stopping_patience: Some(10),
     early_stopping_threshold: 1e-4,
-    lr_schedule: Some(LearningRateSchedule::StepLR {
-        step_size: 30,
-        gamma: 0.1
-    }),
     validation_split: 0.2,
     shuffle: true,
     random_seed: Some(42),
+    ..Default::default()
 };
 
 let history = network.train(&train_data, &train_labels, &config)?;
-println!("Best accuracy: {:.4}", history.best_accuracy());
+println!("Final loss: {:.4}", history.final_loss());
 ```
 
 ### Model Persistence
 
 ```rust
+use nnl::io::{save_model, load_model, ModelFormat};
+
 // Save model
-save_model(&network, "my_model.bin", ModelFormat::Binary)?;
+save_model(&network, "my_model.bin", ModelFormat::Binary, None)?;
 
 // Load model
 let loaded_network = load_model("my_model.bin")?;
@@ -267,83 +293,88 @@ let loaded_network = load_model("my_model.bin")?;
 let metadata = ModelMetadata {
     name: "MNIST Classifier".to_string(),
     description: "CNN for digit classification".to_string(),
-    training_info: Some(training_info),
     ..Default::default()
 };
-save_model_with_metadata(&network, "model_with_meta.json", ModelFormat::Json, &metadata)?;
+save_model(&network, "model_with_meta.json", ModelFormat::Json, Some(&metadata))?;
 ```
 
 ## Performance
 
 ### Benchmarks
 
-Performance comparison on common tasks (Intel i7-10700K, RTX 3080):
+Performance comparison on common tasks (Intel i7-10700K, RTX 3060 via Vulkan):
 
-| Task | CPU (8 threads) | CUDA GPU | Speedup |
-|------|----------------|----------|---------|
-| Dense 1000x1000 MatMul | 12.5ms | 0.8ms | 15.6x |
-| Conv2D 224x224x64 | 145ms | 8.2ms | 17.7x |
-| MNIST Training (60k samples) | 45s | 3.2s | 14.1x |
+| Task | CPU (8 threads) | Vulkan GPU | Speedup |
+|------|----------------|------------|---------|
+| Dense 1000x1000 MatMul | 12.5ms | 3.2ms | 3.9x |
+| Conv2D 224x224x64 | 145ms | 28ms | 5.2x |
+| MNIST Training (60k samples) | 45s | 18s | 2.5x |
+
+*Note: Performance varies significantly based on GPU model and driver quality. Vulkan performance on NVIDIA may be lower than native CUDA.*
 
 ### Optimization Tips
 
-1. **Use appropriate batch sizes**: 32-256 for GPU, 8-32 for CPU
-2. **Enable CPU optimizations**: Use `features = ["cpu-optimized"]` for Intel MKL
-3. **Memory management**: Call `network.zero_grad()` regularly to free unused memory
-4. **Data loading**: Use parallel data loading for large datasets
-5. **Mixed precision**: Enable f16 on supported GPUs for 2x speedup
+1. **Use appropriate batch sizes**: 32-128 for GPU, 8-32 for CPU
+2. **Enable CPU optimizations**: Use `features = ["cpu-optimized"]` for OpenBLAS
+3. **Intel CPUs**: Use `features = ["intel-mkl"]` for maximum CPU performance
+4. **Memory management**: Call `network.zero_grad()` regularly to free unused memory
+5. **Data loading**: Use parallel data loading for large datasets
+6. **GPU memory**: Monitor GPU memory usage, reduce batch size if running out
 
 ## Feature Flags
 
-| Feature | Description | Example |
-|---------|-------------|---------|
-| `default` | CPU-optimized backend | `nnl = "0.1.0"` |
-| `cuda` | NVIDIA CUDA support | `features = ["cuda"]` |
-| `vulkan` | Vulkan compute support | `features = ["vulkan"]` |
-| `rocm` | AMD ROCm support (experimental) | `features = ["rocm"]` |
-| `cpu-optimized` | Intel MKL/OpenBLAS acceleration | `features = ["cpu-optimized"]` |
-| `all-backends` | All GPU backends | `features = ["all-backends"]` |
-| `examples` | Example binaries | `features = ["examples"]` |
+| Feature | Description | Dependencies |
+|---------|-------------|--------------|
+| `default` | CPU-optimized + examples | `["cpu-optimized", "examples"]` |
+| `cpu-optimized` | OpenBLAS acceleration | `openblas-src` |
+| `intel-mkl` | Intel MKL acceleration | `intel-mkl-src` |
+| `examples` | Example binaries and utilities | `clap`, `image` |
+
+Note: Vulkan support is always enabled and does not require a feature flag.
 
 ## Troubleshooting
 
 ### Common Issues
 
-**CUDA not found**
-```bash
-# Install CUDA toolkit 11.0+
-# Add to ~/.bashrc:
-export PATH=/usr/local/cuda/bin:$PATH
-export LD_LIBRARY_PATH=/usr/local/cuda/lib64:$LD_LIBRARY_PATH
-```
-
 **Vulkan not available**
 ```bash
-# Install Vulkan drivers
-sudo apt install vulkan-tools vulkan-loader-dev  # Ubuntu/Debian
-# Verify: vulkaninfo
+# Install Vulkan drivers and loader
+# Ubuntu/Debian:
+sudo apt install vulkan-tools vulkan-utils mesa-vulkan-drivers
+
+# Verify Vulkan works:
+vulkaninfo
+
+# For NVIDIA GPUs, ensure latest drivers are installed
+# For AMD GPUs on Linux, ensure AMDGPU driver is loaded
 ```
 
 **Slow CPU performance**
 ```toml
-# Enable CPU optimizations
+# Enable OpenBLAS optimizations
 nnl = { version = "0.1.0", features = ["cpu-optimized"] }
+
+# Or for Intel CPUs, use MKL:
+nnl = { version = "0.1.0", features = ["intel-mkl"] }
 ```
 
 **Out of memory on GPU**
-- Reduce batch size
-- Use gradient accumulation
-- Enable mixed precision training
+- Reduce batch size in `TrainingConfig`
+- Use smaller model architectures
+- Monitor GPU memory usage with `nvidia-smi` or similar tools
 
-**HIP/ROCm `hip_runtime_api.h` not found**
-This error occurs when the `hip-runtime-sys` crate cannot find the necessary ROCm/HIP header files, typically during a build that enables the `rocm` feature.
+**Compilation errors with MKL**
 ```bash
-# Set the HIP_PATH environment variable to your ROCm installation directory.
-# For example, if ROCm is installed at /opt/rocm:
-export HIP_PATH=/opt/rocm
-# Verify that $HIP_PATH/include/hip/hip_runtime_api.h exists.
+# Ensure Intel MKL is properly installed
+# Or switch to OpenBLAS:
+nnl = { version = "0.1.0", features = ["cpu-optimized"] }
 ```
-This is often required for `docs.rs` builds or local builds on systems with ROCm.
+
+**Poor GPU performance**
+- Ensure you're using `Device::vulkan()` or `Device::auto_select()`
+- Check that Vulkan drivers are up to date
+- Some operations may not be optimized for GPU yet
+- Consider using CPU with optimizations for small models
 
 ## API Documentation
 
@@ -355,6 +386,7 @@ Key modules:
 - [`layers`](https://docs.rs/nnl/latest/nnl/layers/) - Layer implementations and configurations
 - [`optimizers`](https://docs.rs/nnl/latest/nnl/optimizers/) - Optimization algorithms
 - [`device`](https://docs.rs/nnl/latest/nnl/device/) - Device management and backend selection
+- [`io`](https://docs.rs/nnl/latest/nnl/io/) - Model saving and loading
 
 ## Contributing
 
@@ -376,32 +408,41 @@ cd NNL
 cargo build
 cargo test
 cargo run --example xor
+
+# Test GPU functionality (requires Vulkan)
+cargo run --example xor_gpu
 ```
 
 ## Roadmap
 
-- [ ] **Distributed Training**: Multi-GPU and multi-node support
+- [ ] **CUDA Support**: Native NVIDIA CUDA backend for better performance
+- [ ] **ROCm Support**: AMD ROCm backend for compute-focused workloads  
+- [ ] **Distributed Training**: Multi-GPU support
 - [ ] **Mobile Deployment**: ARM optimization and model quantization
 - [ ] **Web Assembly**: Browser-based inference
 - [ ] **Model Zoo**: Pre-trained models for common tasks
 - [ ] **Auto-ML**: Neural architecture search
 - [ ] **Graph Optimization**: Operator fusion and memory optimization
 
+## Limitations
+
+- **CUDA**: Not yet supported (Vulkan used for NVIDIA GPUs)
+- **ROCm**: Not yet supported (Vulkan used for AMD GPUs)
+- **Distributed Training**: Single device only
+- **Model Formats**: Limited compared to PyTorch/TensorFlow
+- **Layer Types**: Growing but not comprehensive
+- **Performance**: Vulkan overhead may impact small models
+
 ## License
 
-This project is dual-licensed under either of:
-
-- Apache License, Version 2.0 ([LICENSE-APACHE](LICENSE-APACHE) or http://www.apache.org/licenses/LICENSE-2.0)
-- MIT License ([LICENSE-MIT](LICENSE-MIT) or http://opensource.org/licenses/MIT)
-
-at your option.
+This project is licensed under the MIT License - see the [LICENSE](LICENSE-MIT) file for details.
 
 ## Acknowledgments
 
+- Built on excellent Rust ecosystem crates: `ndarray`, `rayon`, `vulkano`
 - Inspired by PyTorch and TensorFlow APIs
-- Built on excellent Rust ecosystem crates: `ndarray`, `rayon`, `vulkano`, `cudarc`
 - Thanks to the Rust ML community and all contributors
 
 ---
 
-**Questions?** Check out our [FAQ](docs/FAQ.md) or open an [issue](https://github.com/hotplugindev/nnl/issues).
+**Questions?** Open an [issue](https://github.com/hotplugindev/nnl/issues) on GitHub.
