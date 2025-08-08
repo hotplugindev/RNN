@@ -12,6 +12,7 @@ use std::sync::{Arc, Mutex};
 /// Vulkan compute backend (simplified implementation)
 pub struct VulkanBackend {
     device_info: DeviceInfo,
+    #[allow(dead_code)]
     kernel_cache: Arc<Mutex<HashMap<String, Arc<VulkanKernel>>>>,
 }
 
@@ -37,6 +38,7 @@ impl VulkanBackend {
     }
 
     /// Get or create a compute pipeline for the given shader
+    #[allow(dead_code)]
     fn get_pipeline(&self, name: &str) -> Result<Arc<VulkanKernel>> {
         let mut cache = self.kernel_cache.lock().unwrap();
 

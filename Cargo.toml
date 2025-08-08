@@ -22,6 +22,14 @@ name = "mnist_gpu"
 path = "examples/mnist_gpu.rs"
 
 [[example]]
+name = "mnist_small"
+path = "examples/mnist.rs"
+
+[[example]]
+name = "mnist_small_gpu"
+path = "examples/mnist_gpu.rs"
+
+[[example]]
 name = "xor"
 path = "examples/xor.rs"
 

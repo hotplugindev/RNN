@@ -73,6 +73,7 @@ pub trait TrainingCallback: Send + Sync {
     fn on_batch_start(&mut self, batch: usize, total_batches: usize);
     /// Called at the end of each batch with computed loss
     fn on_batch_end(&mut self, batch: usize, loss: f32);
+    /// Check if training should be stopped early
     fn should_stop(&self) -> bool {
         false
     }
@@ -81,11 +82,14 @@ pub trait TrainingCallback: Send + Sync {
 /// Simple progress callback implementation
 #[derive(Debug)]
 pub struct ProgressCallback {
+    /// Whether to print verbose output
     pub verbose: bool,
+    /// Print progress every N epochs
     pub print_every: usize,
 }
 
 impl ProgressCallback {
+    /// Create a new progress callback
     pub fn new(verbose: bool) -> Self {
         Self {
             verbose,
@@ -718,19 +722,28 @@ impl Network {
 /// Network architecture summary
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct NetworkSummary {
+    /// Information about each layer in the network
     pub layers: Vec<LayerInfo>,
+    /// Total number of trainable parameters
     pub total_parameters: usize,
+    /// Name of the loss function being used
     pub loss_function: String,
+    /// Name of the optimizer being used
     pub optimizer: String,
+    /// Device where the network is running
     pub device: String,
 }
 
 /// Layer information for summary
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct LayerInfo {
+    /// Index of the layer in the network
     pub index: usize,
+    /// Name/type of the layer
     pub name: String,
+    /// Number of parameters in this layer
     pub parameters: usize,
+    /// Output shape of this layer
     pub output_shape: Vec<usize>,
 }
 

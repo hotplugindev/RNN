@@ -543,6 +543,7 @@ pub mod perf {
     }
 
     impl Profiler {
+        /// Create a new profiler instance
         pub fn new() -> Self {
             Self::default()
         }

@@ -15,67 +15,108 @@ use std::fmt;
 pub enum OptimizerConfig {
     /// Stochastic Gradient Descent
     SGD {
+        /// Learning rate for parameter updates
         learning_rate: f32,
+        /// Optional momentum factor for accelerated gradient descent
         momentum: Option<f32>,
+        /// Optional L2 regularization weight decay
         weight_decay: Option<f32>,
+        /// Whether to use Nesterov accelerated gradient
         nesterov: bool,
     },
     /// Adam optimizer
     Adam {
+        /// Learning rate for parameter updates
         learning_rate: f32,
+        /// Exponential decay rate for first moment estimates
         beta1: f32,
+        /// Exponential decay rate for second moment estimates
         beta2: f32,
+        /// Small constant for numerical stability
         epsilon: f32,
+        /// Optional L2 regularization weight decay
         weight_decay: Option<f32>,
+        /// Whether to use AMSGrad variant
         amsgrad: bool,
     },
     /// AdaGrad optimizer
     AdaGrad {
+        /// Learning rate for parameter updates
         learning_rate: f32,
+        /// Small constant for numerical stability
         epsilon: f32,
+        /// Optional L2 regularization weight decay
         weight_decay: Option<f32>,
     },
     /// RMSprop optimizer
     RMSprop {
+        /// Learning rate for parameter updates
         learning_rate: f32,
+        /// Smoothing constant for moving average of squared gradients
         alpha: f32,
+        /// Small constant for numerical stability
         epsilon: f32,
+        /// Optional L2 regularization weight decay
         weight_decay: Option<f32>,
+        /// Optional momentum factor
         momentum: Option<f32>,
+        /// Whether to center the moving average
         centered: bool,
     },
     /// AdamW optimizer (Adam with decoupled weight decay)
     AdamW {
+        /// Learning rate for parameter updates
         learning_rate: f32,
+        /// Exponential decay rate for first moment estimates
         beta1: f32,
+        /// Exponential decay rate for second moment estimates
         beta2: f32,
+        /// Small constant for numerical stability
         epsilon: f32,
+        /// Weight decay coefficient for decoupled regularization
         weight_decay: f32,
     },
     /// LBFGS optimizer (Newton's method approximation)
     LBFGS {
+        /// Learning rate for parameter updates
         learning_rate: f32,
+        /// Maximum number of iterations per optimization step
         max_iter: usize,
+        /// Maximum number of function evaluations per optimization step
         max_eval: Option<usize>,
+        /// Termination tolerance on first order optimality
         tolerance_grad: f32,
+        /// Termination tolerance on function/parameter changes
         tolerance_change: f32,
+        /// Number of past updates to store for Hessian approximation
         history_size: usize,
+        /// Line search function name
         line_search_fn: Option<String>,
     },
     /// Adabound optimizer
     AdaBound {
+        /// Learning rate for parameter updates
         learning_rate: f32,
+        /// Exponential decay rate for first moment estimates
         beta1: f32,
+        /// Exponential decay rate for second moment estimates
         beta2: f32,
+        /// Small constant for numerical stability
         epsilon: f32,
+        /// Final (lower bound) learning rate
         final_lr: f32,
+        /// Convergence speed of the bound functions
         gamma: f32,
+        /// Optional L2 regularization weight decay
         weight_decay: Option<f32>,
     },
     /// Lookahead optimizer wrapper
     Lookahead {
+        /// Base optimizer to wrap with lookahead
         base_optimizer: Box<OptimizerConfig>,
+        /// Number of fast weight update steps
         k: usize,
+        /// Step size for updating slow weights
         alpha: f32,
     },
 }
@@ -115,6 +156,7 @@ pub struct SGD {
 }
 
 impl SGD {
+    /// Creates a new SGD optimizer from configuration
     pub fn new(config: &OptimizerConfig) -> Result<Self> {
         match config {
             OptimizerConfig::SGD {
@@ -261,6 +303,7 @@ pub struct Adam {
 }
 
 impl Adam {
+    /// Creates a new Adam optimizer from configuration
     pub fn new(config: &OptimizerConfig) -> Result<Self> {
         match config {
             OptimizerConfig::Adam {
@@ -470,6 +513,7 @@ pub struct AdaGrad {
 }
 
 impl AdaGrad {
+    /// Creates a new AdaGrad optimizer from configuration
     pub fn new(config: &OptimizerConfig) -> Result<Self> {
         match config {
             OptimizerConfig::AdaGrad {

@@ -13,26 +13,40 @@ pub type Result<T> = std::result::Result<T, RnnError>;
 pub enum RnnError {
     /// Tensor operation errors
     #[error("Tensor error: {message}")]
-    TensorError { message: String },
+    TensorError {
+        /// Error message describing the tensor operation failure
+        message: String,
+    },
 
     /// Shape mismatch errors
     #[error("Shape mismatch: expected {expected:?}, got {actual:?}")]
     ShapeMismatch {
+        /// Expected tensor shape
         expected: Vec<usize>,
+        /// Actual tensor shape that was provided
         actual: Vec<usize>,
     },
 
     /// Device/backend errors
     #[error("Device error: {message}")]
-    DeviceError { message: String },
+    DeviceError {
+        /// Error message describing the device operation failure
+        message: String,
+    },
 
     /// Network architecture errors
     #[error("Network error: {message}")]
-    NetworkError { message: String },
+    NetworkError {
+        /// Error message describing the network operation failure
+        message: String,
+    },
 
     /// Training errors
     #[error("Training error: {message}")]
-    TrainingError { message: String },
+    TrainingError {
+        /// Error message describing the training operation failure
+        message: String,
+    },
 
     /// I/O errors for model loading/saving
     #[error("I/O error: {0}")]
@@ -57,23 +71,38 @@ pub enum RnnError {
 
     /// Invalid configuration errors
     #[error("Invalid configuration: {message}")]
-    ConfigError { message: String },
+    ConfigError {
+        /// Error message describing the invalid configuration
+        message: String,
+    },
 
     /// Mathematical operation errors (e.g., division by zero, NaN)
     #[error("Math error: {message}")]
-    MathError { message: String },
+    MathError {
+        /// Error message describing the mathematical operation failure
+        message: String,
+    },
 
     /// Memory allocation errors
     #[error("Memory error: {message}")]
-    MemoryError { message: String },
+    MemoryError {
+        /// Error message describing the memory allocation failure
+        message: String,
+    },
 
     /// Unsupported operation errors
     #[error("Unsupported operation: {message}")]
-    UnsupportedError { message: String },
+    UnsupportedError {
+        /// Error message describing the unsupported operation
+        message: String,
+    },
 
     /// Invalid input errors
     #[error("Invalid input: {message}")]
-    InvalidInputError { message: String },
+    InvalidInputError {
+        /// Error message describing the invalid input
+        message: String,
+    },
 }
 
 impl RnnError {
@@ -167,7 +196,9 @@ impl RnnError {
 
 /// Utility trait for converting common error types
 pub trait IntoRnnError<T> {
+    /// Convert the error into an RnnError
     fn into_rnn_error(self) -> Result<T>;
+    /// Add context to the error before converting to RnnError
     fn with_context<F>(self, f: F) -> Result<T>
     where
         F: FnOnce() -> String;

@@ -23,8 +23,10 @@ pub type Shape = Vec<usize>;
 /// Multi-dimensional tensor with device support
 #[derive(Debug, Clone)]
 pub struct Tensor {
+    /// Internal tensor data representation
     pub data: TensorData,
     shape: Shape,
+    /// Device where the tensor is stored
     pub device: Arc<Device>,
     requires_grad: bool,
     grad: Option<Box<Tensor>>,
@@ -548,10 +550,14 @@ impl fmt::Display for Tensor {
 }
 
 // Serialization support
+/// Serializable representation of a tensor for persistence
 #[derive(Serialize, Deserialize, Debug, Clone)]
 pub struct SerializableTensor {
+    /// Tensor data as a flat vector
     pub data: Vec<f32>,
+    /// Shape of the tensor
     pub shape: Shape,
+    /// Whether gradients are required for this tensor
     pub requires_grad: bool,
 }
 

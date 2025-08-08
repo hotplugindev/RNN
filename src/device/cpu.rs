@@ -216,14 +216,10 @@ impl Drop for CpuMemory {
 // 1. The NonNull<f32> pointer points to memory allocated by the global allocator
 // 2. The memory is exclusively owned by this CpuMemory instance
 // 3. No shared mutable state exists between threads
-// CpuMemory can be Send and Sync since it owns its data exclusively
-// and uses proper memory management through Layout
-
-// CpuMemory owns its data exclusively through NonNull<f32> and manages
-// memory with proper Layout. The pointer is never shared between threads
-// without proper synchronization, and deallocation is handled correctly.
-// SAFETY: CpuMemory exclusively owns the memory pointed to by NonNull<f32>
-// and manages it safely through proper Layout and deallocation.
+// 4. The memory is properly deallocated in Drop
+// SAFETY: CpuMemory exclusively owns its allocated memory through NonNull<f32>
+// and manages it with proper Layout. The memory is not shared between threads
+// without proper synchronization.
 unsafe impl Send for CpuMemory {}
 unsafe impl Sync for CpuMemory {}
 

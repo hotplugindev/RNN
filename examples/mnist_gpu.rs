@@ -294,28 +294,10 @@ fn train_dense_network(
     let (train_inputs, train_targets, test_inputs, test_targets) =
         dataset.to_tensors(device, batch_size, false)?;
 
-    println!("First batch shapes:");
+    println!("First sample shapes:");
     if !train_inputs.is_empty() {
         println!("  Input: {:?}", train_inputs[0].shape());
         println!("  Target: {:?}", train_targets[0].shape());
-
-        // Debug: Check actual tensor data
-        let input_data = train_inputs[0].to_vec()?;
-        println!("  Input tensor size: {}", input_data.len());
-        println!("  Expected input size for dense layer: 784");
-
-        if train_inputs[0].shape().len() > 0 {
-            let batch_dim = train_inputs[0].shape()[0];
-            let feature_dim = if train_inputs[0].shape().len() > 1 {
-                train_inputs[0].shape()[1]
-            } else {
-                1
-            };
-            println!(
-                "  Interpreted as: batch_size={}, features={}",
-                batch_dim, feature_dim
-            );
-        }
     }
 
     // Build network using preset
@@ -350,25 +332,6 @@ fn train_dense_network(
 
     println!("Starting dense network training...");
     println!("Training with {} samples", train_inputs.len());
-    println!("TrainingConfig batch_size: {}", training_config.batch_size);
-    println!(
-        "Individual tensor shape: {:?}",
-        if !train_inputs.is_empty() {
-            Some(train_inputs[0].shape())
-        } else {
-            None
-        }
-    );
-
-    // Test forward pass before training
-    if !train_inputs.is_empty() {
-        println!("Testing forward pass with first batch...");
-        let test_output = network.forward(&train_inputs[0])?;
-        println!(
-            "Forward pass successful! Output shape: {:?}",
-            test_output.shape()
-        );
-    }
 
     let start_time = Instant::now();
 
@@ -515,15 +478,6 @@ fn train_cnn_network(
 
     println!("Starting CNN training...");
     println!("Training with {} samples", train_inputs.len());
-    println!("TrainingConfig batch_size: {}", training_config.batch_size);
-    println!(
-        "Individual tensor shape: {:?}",
-        if !train_inputs.is_empty() {
-            Some(train_inputs[0].shape())
-        } else {
-            None
-        }
-    );
     let start_time = Instant::now();
 
     let history = network.train(&train_inputs, &train_targets, &training_config)?;

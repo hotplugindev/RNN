@@ -3,7 +3,6 @@
 //! This module provides training configuration, metrics tracking, and
 //! utilities for monitoring and controlling the training process.
 
-use crate::error::Result;
 use serde::{Deserialize, Serialize};
 use std::collections::VecDeque;
 use std::fmt;
@@ -51,20 +50,42 @@ impl Default for TrainingConfig {
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub enum LearningRateSchedule {
     /// Step decay: multiply by gamma every step_size epochs
-    StepLR { step_size: usize, gamma: f32 },
+    StepLR {
+        /// Number of epochs between each step
+        step_size: usize,
+        /// Multiplicative factor for learning rate decay
+        gamma: f32,
+    },
     /// Exponential decay: multiply by gamma each epoch
-    ExponentialLR { gamma: f32 },
+    ExponentialLR {
+        /// Multiplicative factor for learning rate decay
+        gamma: f32,
+    },
     /// Reduce on plateau: reduce when metric stops improving
     ReduceOnPlateau {
+        /// Factor by which the learning rate is reduced
         factor: f32,
+        /// Number of epochs with no improvement after which learning rate is reduced
         patience: usize,
+        /// Threshold for measuring the new optimum, to only focus on significant changes
         threshold: f32,
+        /// Lower bound on the learning rate
         min_lr: f32,
     },
     /// Cosine annealing
-    CosineAnnealingLR { t_max: usize, eta_min: f32 },
+    CosineAnnealingLR {
+        /// Maximum number of iterations
+        t_max: usize,
+        /// Minimum learning rate
+        eta_min: f32,
+    },
     /// Polynomial decay
-    PolynomialLR { total_epochs: usize, power: f32 },
+    PolynomialLR {
+        /// Total number of training epochs
+        total_epochs: usize,
+        /// Power of the polynomial
+        power: f32,
+    },
 }
 
 /// Training metrics for a single epoch
@@ -331,14 +352,23 @@ impl Default for TrainingHistory {
 /// Training summary statistics
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct TrainingSummary {
+    /// Total number of training epochs completed
     pub total_epochs: usize,
+    /// Best (lowest) loss achieved during training
     pub best_loss: f32,
+    /// Best (highest) accuracy achieved during training
     pub best_accuracy: f32,
+    /// Final loss at the end of training
     pub final_loss: f32,
+    /// Final accuracy at the end of training
     pub final_accuracy: f32,
+    /// Epoch number where the best loss was achieved
     pub best_loss_epoch: usize,
+    /// Epoch number where the best accuracy was achieved
     pub best_accuracy_epoch: usize,
+    /// Total training time in milliseconds
     pub total_time_ms: f32,
+    /// Average time per epoch in milliseconds
     pub average_epoch_time_ms: f32,
 }
 
@@ -415,7 +445,6 @@ impl MovingAverage {
 
 /// Training utilities
 pub mod utils {
-    use crate::prelude::*;
 
     /// Calculate exponential moving average
     pub fn ema(current: f32, previous: f32, alpha: f32) -> f32 {

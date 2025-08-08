@@ -12,13 +12,21 @@ use rayon::prelude::*;
 /// Enumeration of tensor operations
 #[derive(Debug, Clone, Copy)]
 pub enum TensorOp {
+    /// Element-wise addition of two tensors
     Add,
+    /// Element-wise subtraction of two tensors
     Sub,
+    /// Element-wise multiplication of two tensors
     Mul,
+    /// Element-wise division of two tensors
     Div,
+    /// Addition of a scalar to all tensor elements
     AddScalar,
+    /// Multiplication of all tensor elements by a scalar
     MulScalar,
+    /// Matrix multiplication between two tensors
     MatMul,
+    /// Element-wise square root of tensor elements
     Sqrt,
 }
 
@@ -650,6 +658,7 @@ fn cpu_reduce_sum(tensor: &Tensor, dim: Option<usize>) -> Result<Tensor> {
     }
 }
 
+/// Compute the maximum value along a specified dimension or globally
 pub fn reduce_max(tensor: &Tensor, dim: Option<usize>) -> Result<Tensor> {
     let data = tensor.to_vec()?;
 
@@ -672,6 +681,7 @@ pub fn reduce_max(tensor: &Tensor, dim: Option<usize>) -> Result<Tensor> {
     }
 }
 
+/// Compute the minimum value along a specified dimension or globally
 pub fn reduce_min(tensor: &Tensor, dim: Option<usize>) -> Result<Tensor> {
     let data = tensor.to_vec()?;
 
@@ -718,6 +728,7 @@ pub fn is_broadcastable(shape_a: &[usize], shape_b: &[usize]) -> bool {
     true
 }
 
+/// Broadcast a tensor to a target shape following NumPy broadcasting rules
 pub fn broadcast_to(tensor: &Tensor, target_shape: &[usize]) -> Result<Tensor> {
     if !is_broadcastable(tensor.shape(), target_shape) {
         return Err(RnnError::shape_mismatch(tensor.shape(), target_shape));
@@ -928,6 +939,7 @@ fn get_tensor_memory(tensor: &Tensor) -> Result<&dyn crate::device::DeviceMemory
 }
 
 /// Execute GPU kernel with Vulkan backend
+#[allow(dead_code)]
 fn execute_gpu_kernel(
     _device: &Device,
     kernel_name: &str,
@@ -969,7 +981,7 @@ mod tests {
 
     #[test]
     fn test_binary_operations() {
-        let device = Device::cpu().unwrap();
+        let _device = Device::cpu().unwrap();
         let a = Tensor::from_slice(&[1.0, 2.0, 3.0, 4.0], &[2, 2]).unwrap();
         let b = Tensor::from_slice(&[5.0, 6.0, 7.0, 8.0], &[2, 2]).unwrap();
 

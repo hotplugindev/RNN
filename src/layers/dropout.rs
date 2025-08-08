@@ -347,7 +347,7 @@ mod tests {
 
         // Check that not all elements are the same as input (unless very unlucky)
         let input_data = input.to_vec().unwrap();
-        let all_same = input_data
+        let _all_same = input_data
             .iter()
             .zip(output_data.iter())
             .all(|(i, o)| (i - o).abs() < 1e-6);

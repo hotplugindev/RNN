@@ -649,6 +649,7 @@ pub mod export {
             .collect()
     }
 
+    #[allow(dead_code)]
     fn map_layer_type_to_onnx(layer_type: &str) -> String {
         match layer_type {
             "Dense" => "MatMul".to_string(),
