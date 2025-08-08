@@ -350,7 +350,7 @@ pub fn create_layer(config: LayerConfig, device: Device) -> Result<Box<dyn Layer
             activation,
             use_bias,
             weight_init,
-        } => Ok(Box::new(Conv2DLayer::new(
+        } => Ok(Box::new(Conv2DLayer::new_on_device(
             in_channels,
             out_channels,
             kernel_size,
@@ -360,6 +360,7 @@ pub fn create_layer(config: LayerConfig, device: Device) -> Result<Box<dyn Layer
             activation,
             use_bias,
             weight_init,
+            device,
         )?)),
         LayerConfig::Dropout { dropout_rate } => Ok(Box::new(DropoutLayer::new(dropout_rate)?)),
         LayerConfig::BatchNorm {
@@ -367,20 +368,22 @@ pub fn create_layer(config: LayerConfig, device: Device) -> Result<Box<dyn Layer
             eps,
             momentum,
             affine,
-        } => Ok(Box::new(BatchNormLayer::new(
+        } => Ok(Box::new(BatchNormLayer::new_on_device(
             num_features,
             eps,
             momentum,
             affine,
+            device,
         )?)),
         LayerConfig::LayerNorm {
             normalized_shape,
             eps,
             elementwise_affine,
-        } => Ok(Box::new(LayerNormLayer::new(
+        } => Ok(Box::new(LayerNormLayer::new_on_device(
             normalized_shape,
             eps,
             elementwise_affine,
+            device,
         )?)),
         LayerConfig::MaxPool2D {
             kernel_size,

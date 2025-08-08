@@ -406,14 +406,23 @@ pub struct LayerNormLayer {
 impl LayerNormLayer {
     /// Create a new layer normalization layer
     pub fn new(normalized_shape: Vec<usize>, eps: f32, elementwise_affine: bool) -> Result<Self> {
+        let device = Device::auto_select()?;
+        Self::new_on_device(normalized_shape, eps, elementwise_affine, device)
+    }
+
+    /// Create a new layer normalization layer on specific device
+    pub fn new_on_device(
+        normalized_shape: Vec<usize>,
+        eps: f32,
+        elementwise_affine: bool,
+        device: Device,
+    ) -> Result<Self> {
         if normalized_shape.is_empty() {
             return Err(RnnError::config("Normalized shape cannot be empty"));
         }
         if eps <= 0.0 {
             return Err(RnnError::config("Epsilon must be positive"));
         }
-
-        let device = Device::auto_select()?;
 
         // Initialize learnable parameters if affine
         let (weight, bias, weight_grad, bias_grad) = if elementwise_affine {
