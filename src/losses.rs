@@ -176,7 +176,7 @@ impl LossFunction {
 
     /// Cross Entropy Loss forward pass (assumes softmax predictions and one-hot targets)
     fn cross_entropy_forward(&self, predictions: &[f32], targets: &[f32]) -> Result<f32> {
-        let eps = 1e-3; // Larger epsilon for more conservative clamping
+        let eps = 1e-6; // Balance between stability and learning capability
         let mut loss = 0.0;
 
         for (&pred, &target) in predictions.iter().zip(targets.iter()) {
@@ -191,34 +191,62 @@ impl LossFunction {
 
     /// Cross Entropy Loss backward pass
     fn cross_entropy_backward(&self, predictions: &[f32], targets: &[f32]) -> Result<Vec<f32>> {
-        let eps = 1e-3; // Larger epsilon for more conservative clamping
-        let n = predictions.len() as f32;
-        let max_gradient = 1.0; // Much smaller max gradient to prevent instability
+        // Check if predictions look like softmax outputs (sum close to 1.0)
+        let pred_sum: f32 = predictions.iter().sum();
+        let is_softmax = (pred_sum - 1.0).abs() < 0.01 && predictions.iter().all(|&x| x >= 0.0);
 
-        let gradients: Vec<f32> = predictions
-            .iter()
-            .zip(targets.iter())
-            .map(|(&pred, &target)| {
-                // Check for NaN inputs first
-                if pred.is_nan() || target.is_nan() {
-                    return 0.0; // Return zero gradient for NaN inputs
-                }
+        if is_softmax {
+            // Use stable combined softmax + CrossEntropy gradient: prediction - target
+            let gradients: Vec<f32> = predictions
+                .iter()
+                .zip(targets.iter())
+                .map(|(&pred, &target)| {
+                    // Check for NaN inputs first
+                    if pred.is_nan() || target.is_nan() {
+                        return 0.0;
+                    }
 
-                // More conservative clamping
-                let pred_clamped = pred.max(eps).min(1.0 - eps);
-                let raw_gradient = -target / pred_clamped / n;
+                    // Stable gradient for softmax + CrossEntropy
+                    let gradient = (pred - target) / predictions.len() as f32;
 
-                // Check for NaN gradient and apply conservative clamping
-                if raw_gradient.is_nan() || !raw_gradient.is_finite() {
-                    0.0 // Return zero gradient for NaN/infinite results
-                } else {
-                    // Apply much tighter gradient clamping for stability
-                    raw_gradient.max(-max_gradient).min(max_gradient)
-                }
-            })
-            .collect();
+                    // Clamp to reasonable range
+                    if gradient.is_finite() {
+                        gradient.max(-2.0).min(2.0)
+                    } else {
+                        0.0
+                    }
+                })
+                .collect();
+            Ok(gradients)
+        } else {
+            // Fallback to standard CrossEntropy gradient for non-softmax outputs
+            let eps = 1e-6;
+            let n = predictions.len() as f32;
+            let max_gradient = 5.0;
 
-        Ok(gradients)
+            let gradients: Vec<f32> = predictions
+                .iter()
+                .zip(targets.iter())
+                .map(|(&pred, &target)| {
+                    // Check for NaN inputs first
+                    if pred.is_nan() || target.is_nan() {
+                        return 0.0;
+                    }
+
+                    let pred_clamped = pred.max(eps).min(1.0 - eps);
+                    let raw_gradient = -target / pred_clamped / n;
+
+                    // Check for NaN gradient and apply conservative clamping
+                    if raw_gradient.is_nan() || !raw_gradient.is_finite() {
+                        0.0
+                    } else {
+                        raw_gradient.max(-max_gradient).min(max_gradient)
+                    }
+                })
+                .collect();
+
+            Ok(gradients)
+        }
     }
 
     /// Binary Cross Entropy forward pass
