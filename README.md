@@ -1,5 +1,7 @@
 # RNN - Rust Neural Network Library
 
+![RNN Logo](rnn.png)
+
 A high-performance neural network library for Rust with comprehensive GPU and CPU support.
 
 [![Crates.io](https://img.shields.io/crates/v/rnn.svg)](https://crates.io/crates/rnn)
