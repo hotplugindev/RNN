@@ -938,42 +938,6 @@ fn get_tensor_memory(tensor: &Tensor) -> Result<&dyn crate::device::DeviceMemory
     }
 }
 
-/// Execute GPU kernel with Vulkan backend
-#[allow(dead_code)]
-fn execute_gpu_kernel(
-    _device: &Device,
-    kernel_name: &str,
-    inputs: &[&dyn crate::device::DeviceMemory],
-    outputs: &[&dyn crate::device::DeviceMemory],
-    scalar: Option<f32>,
-) -> Result<()> {
-    let backend = _device.backend();
-
-    // Create kernel based on operation type
-    let kernel = if scalar.is_some() {
-        crate::device::gpu::VulkanKernel::elementwise(
-            kernel_name.to_string(),
-            (outputs[0].size() / std::mem::size_of::<f32>()) as u32,
-        )
-    } else {
-        crate::device::gpu::VulkanKernel::elementwise(
-            kernel_name.to_string(),
-            (outputs[0].size() / std::mem::size_of::<f32>()) as u32,
-        )
-    };
-
-    // Execute kernel
-    if let Some(scalar_val) = scalar {
-        // Create uniform buffer for scalar
-        let scalar_memory = backend.allocate_uniform(1)?;
-        backend.copy_u32_to_device(&[scalar_val.to_bits()], scalar_memory.as_ref())?;
-
-        backend.execute_kernel_with_uniform(&kernel, inputs, outputs, Some(scalar_memory.as_ref()))
-    } else {
-        backend.execute_kernel(&kernel, inputs, outputs)
-    }
-}
-
 #[cfg(test)]
 mod tests {
     use super::*;

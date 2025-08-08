@@ -224,29 +224,6 @@ impl DenseLayer {
 
         Ok(())
     }
-
-    /// Sum tensor along specified axis
-    #[allow(dead_code)]
-    fn sum_axis_0(&self, tensor: &Tensor) -> Result<Tensor> {
-        let data = tensor.to_vec()?;
-        let shape = tensor.shape();
-
-        if shape.len() != 2 {
-            return Err(RnnError::tensor("Expected 2D tensor for axis 0 sum"));
-        }
-
-        let batch_size = shape[0];
-        let feature_size = shape[1];
-        let mut result = vec![0.0; feature_size];
-
-        for i in 0..batch_size {
-            for j in 0..feature_size {
-                result[j] += data[i * feature_size + j];
-            }
-        }
-
-        Tensor::from_slice_on_device(&result, &[feature_size], tensor.device().clone())
-    }
 }
 
 impl Layer for DenseLayer {

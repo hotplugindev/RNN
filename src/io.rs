@@ -648,18 +648,6 @@ pub mod export {
             })
             .collect()
     }
-
-    #[allow(dead_code)]
-    fn map_layer_type_to_onnx(layer_type: &str) -> String {
-        match layer_type {
-            "Dense" => "MatMul".to_string(),
-            "Conv2D" => "Conv".to_string(),
-            "ReLU" => "Relu".to_string(),
-            "Sigmoid" => "Sigmoid".to_string(),
-            "Softmax" => "Softmax".to_string(),
-            _ => layer_type.to_string(),
-        }
-    }
 }
 
 #[cfg(test)]
