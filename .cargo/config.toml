@@ -9,4 +9,6 @@ exclude = [
     "/data/*",
     "/notebooks/*",
     "/examples/large_file.rs",
+    "examples/*",
+    "img/*.png",
 ]
