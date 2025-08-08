@@ -2,10 +2,10 @@
 name = "rnn"
 version = "0.1.0"
 edition = "2021"
-authors = ["Your Name <your.email@example.com>"]
+authors = ["Giona Berti <mail@gberti.com>"]
 description = "A high-performance neural network library for Rust with CPU and GPU support"
 license = "MIT OR Apache-2.0"
-repository = "https://github.com/yourusername/rnn"
+repository = "https://github.com/hotplugindev/rnn"
 keywords = ["neural-network", "machine-learning", "deep-learning", "gpu", "cpu"]
 categories = ["science", "algorithms"]
 

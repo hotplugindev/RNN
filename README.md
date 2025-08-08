@@ -5,7 +5,7 @@ A high-performance neural network library for Rust with comprehensive GPU and CP
 [![Crates.io](https://img.shields.io/crates/v/rnn.svg)](https://crates.io/crates/rnn)
 [![Documentation](https://docs.rs/rnn/badge.svg)](https://docs.rs/rnn)
 [![License](https://img.shields.io/badge/license-MIT%2FApache--2.0-blue.svg)](#license)
-[![Build Status](https://github.com/yourusername/rnn/workflows/CI/badge.svg)](https://github.com/yourusername/rnn/actions)
+[![Build Status](https://github.com/hotplugindev/rnn/workflows/CI/badge.svg)](https://github.com/hotplugindev/rnn/actions)
 
 ## Features
 
@@ -56,11 +56,11 @@ fn main() -> Result<()> {
     // Training data for XOR problem
     let inputs = Tensor::from_slice(&[
         0.0, 0.0,  // XOR(0,0) = 0
-        0.0, 1.0,  // XOR(0,1) = 1  
+        0.0, 1.0,  // XOR(0,1) = 1
         1.0, 0.0,  // XOR(1,0) = 1
         1.0, 1.0,  // XOR(1,1) = 0
     ], &[4, 2])?;
-    
+
     let targets = Tensor::from_slice(&[0.0, 1.0, 1.0, 0.0], &[4, 1])?;
 
     // Train the network
@@ -91,7 +91,7 @@ rnn = "0.1.0"
 rnn = { version = "0.1.0", features = ["cuda"] }  # NVIDIA CUDA
 # or
 rnn = { version = "0.1.0", features = ["vulkan"] } # Vulkan (AMD/Intel/NVIDIA)
-# or  
+# or
 rnn = { version = "0.1.0", features = ["all-backends"] } # All GPU backends
 ```
 
@@ -112,7 +112,7 @@ Run the included examples to see the library in action:
 # Basic XOR problem (CPU)
 cargo run --example xor
 
-# XOR with GPU acceleration  
+# XOR with GPU acceleration
 cargo run --example xor_gpu --features cuda
 
 # MNIST digit classification
@@ -165,23 +165,23 @@ let matmul = a.matmul(&b.transpose(&[1, 0])?)?;  // Matrix multiplication
 
 ```rust
 let network = NetworkBuilder::new()
-    .add_layer(LayerConfig::Dense { 
-        input_size: 784, 
-        output_size: 128, 
+    .add_layer(LayerConfig::Dense {
+        input_size: 784,
+        output_size: 128,
         activation: Activation::ReLU,
         use_bias: true,
         weight_init: WeightInit::Xavier,
     })
     .add_layer(LayerConfig::Dropout { dropout_rate: 0.2 })
-    .add_layer(LayerConfig::Dense { 
-        input_size: 128, 
-        output_size: 10, 
+    .add_layer(LayerConfig::Dense {
+        input_size: 128,
+        output_size: 10,
         activation: Activation::Softmax,
         use_bias: true,
         weight_init: WeightInit::Xavier,
     })
     .loss(LossFunction::CategoricalCrossEntropy)
-    .optimizer(OptimizerConfig::Adam { 
+    .optimizer(OptimizerConfig::Adam {
         learning_rate: 0.001,
         beta1: 0.9,
         beta2: 0.999,
@@ -201,9 +201,9 @@ let config = TrainingConfig {
     verbose: true,
     early_stopping_patience: 10,
     early_stopping_threshold: 1e-4,
-    lr_schedule: Some(LearningRateSchedule::StepLR { 
-        step_size: 30, 
-        gamma: 0.1 
+    lr_schedule: Some(LearningRateSchedule::StepLR {
+        step_size: 30,
+        gamma: 0.1
     }),
     validation_split: 0.2,
     shuffle: true,
@@ -220,7 +220,7 @@ println!("Best accuracy: {:.4}", history.best_accuracy());
 // Save model
 save_model(&network, "my_model.bin", ModelFormat::Binary)?;
 
-// Load model  
+// Load model
 let loaded_network = load_model("my_model.bin")?;
 
 // Save with metadata
@@ -321,7 +321,7 @@ For major changes, please open an issue first to discuss the proposed changes.
 ### Development Setup
 
 ```bash
-git clone https://github.com/yourusername/rnn.git
+git clone https://github.com/hotplugindev/rnn.git
 cd rnn
 cargo build
 cargo test
@@ -331,7 +331,7 @@ cargo run --example xor
 ## Roadmap
 
 - [ ] **Distributed Training**: Multi-GPU and multi-node support
-- [ ] **Mobile Deployment**: ARM optimization and model quantization  
+- [ ] **Mobile Deployment**: ARM optimization and model quantization
 - [ ] **Web Assembly**: Browser-based inference
 - [ ] **Model Zoo**: Pre-trained models for common tasks
 - [ ] **Auto-ML**: Neural architecture search
@@ -354,4 +354,4 @@ at your option.
 
 ---
 
-**Questions?** Check out our [FAQ](docs/FAQ.md) or open an [issue](https://github.com/yourusername/rnn/issues).
+**Questions?** Check out our [FAQ](docs/FAQ.md) or open an [issue](https://github.com/hotplugindev/rnn/issues).
