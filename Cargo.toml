@@ -13,13 +13,14 @@ exclude = [
     "/.gitignore",
     "/target/*",
     "*.mp4",
+    "*.png",
     "*.jpg",
     "*.zip",
     "/data/*",
     "/notebooks/*",
     "/examples/large_file.rs",
     "examples/*",
-    "img/nnl2.png",
+    "img/*.png",
 ]
 
 
