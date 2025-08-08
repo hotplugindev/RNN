@@ -1,6 +1,6 @@
 # NNL - Neural Network Library
 
-![nnl Logo](nnl.png)
+![nnl Logo](img/nnl.png)
 
 A high-performance neural network library for Rust with comprehensive GPU and CPU support.
 
