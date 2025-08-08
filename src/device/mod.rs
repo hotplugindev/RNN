@@ -1,0 +1,338 @@
+//! Device and backend abstraction layer
+//!
+//! This module provides a unified interface for different compute backends
+//! including CPU, CUDA, and Vulkan/WGPU compute shaders.
+
+use crate::error::Result;
+use std::fmt;
+use std::sync::Arc;
+
+pub mod cpu;
+pub mod gpu;
+
+#[cfg(feature = "cuda")]
+pub mod cuda;
+
+/// Available device types
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+pub enum DeviceType {
+    /// CPU execution with SIMD optimizations
+    Cpu,
+    /// NVIDIA CUDA GPU
+    #[cfg(feature = "cuda")]
+    Cuda,
+    /// Vulkan compute shaders (AMD/Intel/NVIDIA)
+    Vulkan,
+    /// WebGPU compute backend
+    WebGpu,
+}
+
+impl fmt::Display for DeviceType {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self {
+            DeviceType::Cpu => write!(f, "CPU"),
+            #[cfg(feature = "cuda")]
+            DeviceType::Cuda => write!(f, "CUDA"),
+            DeviceType::Vulkan => write!(f, "Vulkan"),
+            DeviceType::WebGpu => write!(f, "WebGPU"),
+        }
+    }
+}
+
+/// Device information and capabilities
+#[derive(Debug, Clone)]
+pub struct DeviceInfo {
+    /// Device name identifier
+    pub name: String,
+    /// Type of the device (CPU, CUDA, Vulkan, etc.)
+    pub device_type: DeviceType,
+    /// Available memory in bytes
+    pub memory_size: Option<u64>,
+    /// Number of compute units (cores, SMs, etc.)
+    pub compute_units: Option<u32>,
+    /// Whether the device supports half-precision floating point
+    pub supports_f16: bool,
+    /// Whether the device supports double-precision floating point
+    pub supports_f64: bool,
+}
+
+/// Unified device abstraction
+#[derive(Clone)]
+pub struct Device {
+    backend: Arc<dyn Backend + Send + Sync>,
+    info: DeviceInfo,
+}
+
+impl Device {
+    /// Create a new device with the specified backend
+    pub fn new(backend: Arc<dyn Backend + Send + Sync>, info: DeviceInfo) -> Self {
+        Self { backend, info }
+    }
+
+    /// Auto-select the best available device
+    pub fn auto_select() -> Result<Self> {
+        // Try GPU backends first, then fall back to CPU
+
+        #[cfg(feature = "cuda")]
+        if let Ok(device) = Self::cuda() {
+            log::info!("Selected CUDA device: {}", device.info.name);
+            return Ok(device);
+        }
+
+        if let Ok(device) = Self::vulkan() {
+            log::info!("Selected Vulkan device: {}", device.info.name);
+            return Ok(device);
+        }
+
+        if let Ok(device) = Self::webgpu() {
+            log::info!("Selected WebGPU device: {}", device.info.name);
+            return Ok(device);
+        }
+
+        // Fall back to CPU
+        let device = Self::cpu()?;
+        log::info!("Selected CPU device: {}", device.info.name);
+        Ok(device)
+    }
+
+    /// Create a CPU device
+    pub fn cpu() -> Result<Self> {
+        let backend = Arc::new(cpu::CpuBackend::new()?);
+        let info = DeviceInfo {
+            name: "CPU".to_string(),
+            device_type: DeviceType::Cpu,
+            memory_size: None, // System RAM
+            compute_units: Some(num_cpus::get() as u32),
+            supports_f16: false,
+            supports_f64: true,
+        };
+        Ok(Self::new(backend, info))
+    }
+
+    #[cfg(feature = "cuda")]
+    /// Create a CUDA device
+    pub fn cuda() -> Result<Self> {
+        let backend = Arc::new(cuda::CudaBackend::new()?);
+        let info = backend.device_info()?;
+        Ok(Self::new(backend, info))
+    }
+
+    /// Create a Vulkan device
+    pub fn vulkan() -> Result<Self> {
+        let backend = Arc::new(gpu::VulkanBackend::new()?);
+        let info = backend.device_info()?;
+        Ok(Self::new(backend, info))
+    }
+
+    /// Create a WebGPU device
+    pub fn webgpu() -> Result<Self> {
+        let backend = Arc::new(gpu::WebGpuBackend::new()?);
+        let info = backend.device_info()?;
+        Ok(Self::new(backend, info))
+    }
+
+    /// Get device information
+    pub fn info(&self) -> &DeviceInfo {
+        &self.info
+    }
+
+    /// Get device type
+    pub fn device_type(&self) -> DeviceType {
+        self.info.device_type
+    }
+
+    /// Get the backend reference
+    pub fn backend(&self) -> &dyn Backend {
+        self.backend.as_ref()
+    }
+
+    /// Check if device supports half precision
+    pub fn supports_f16(&self) -> bool {
+        self.info.supports_f16
+    }
+
+    /// Check if device supports double precision
+    pub fn supports_f64(&self) -> bool {
+        self.info.supports_f64
+    }
+
+    /// Get available memory in bytes
+    pub fn memory_size(&self) -> Option<u64> {
+        self.info.memory_size
+    }
+
+    /// Synchronize device operations
+    pub fn synchronize(&self) -> Result<()> {
+        self.backend.synchronize()
+    }
+}
+
+impl fmt::Debug for Device {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        f.debug_struct("Device").field("info", &self.info).finish()
+    }
+}
+
+/// Backend trait for different compute devices
+pub trait Backend {
+    /// Get device information
+    fn device_info(&self) -> Result<DeviceInfo>;
+
+    /// Allocate memory on device
+    fn allocate(&self, size: usize) -> Result<Arc<dyn DeviceMemory>>;
+
+    /// Copy data from host to device
+    fn copy_to_device(&self, data: &[f32], memory: &dyn DeviceMemory) -> Result<()>;
+
+    /// Copy data from device to host
+    fn copy_to_host(&self, memory: &dyn DeviceMemory, data: &mut [f32]) -> Result<()>;
+
+    /// Execute a kernel/compute shader
+    fn execute_kernel(
+        &self,
+        kernel: &dyn Kernel,
+        inputs: &[&dyn DeviceMemory],
+        outputs: &[&dyn DeviceMemory],
+    ) -> Result<()>;
+
+    /// Synchronize all operations
+    fn synchronize(&self) -> Result<()>;
+
+    /// Check if backend is available
+    fn is_available(&self) -> bool;
+}
+
+/// Device memory abstraction
+pub trait DeviceMemory: std::fmt::Debug + Send + Sync {
+    /// Get memory size in bytes
+    fn size(&self) -> usize;
+
+    /// Get device type
+    fn device_type(&self) -> DeviceType;
+
+    /// Downcast to any for type checking
+    fn as_any(&self) -> &dyn std::any::Any;
+
+    /// Downcast to mutable any for type checking
+    fn as_any_mut(&mut self) -> &mut dyn std::any::Any;
+}
+
+/// Kernel/compute shader abstraction
+pub trait Kernel {
+    /// Get kernel name/identifier
+    fn name(&self) -> &str;
+
+    /// Get required local work group size
+    fn local_size(&self) -> Option<[u32; 3]>;
+
+    /// Downcast to any for type checking
+    fn as_any(&self) -> &dyn std::any::Any;
+}
+
+/// Utility functions for device detection and benchmarking
+pub mod utils {
+    use super::*;
+
+    /// List all available devices
+    pub fn list_devices() -> Vec<DeviceInfo> {
+        let mut devices = Vec::new();
+
+        // Always have CPU
+        if let Ok(cpu) = Device::cpu() {
+            devices.push(cpu.info().clone());
+        }
+
+        #[cfg(feature = "cuda")]
+        if let Ok(cuda) = Device::cuda() {
+            devices.push(cuda.info().clone());
+        }
+
+        if let Ok(vulkan) = Device::vulkan() {
+            devices.push(vulkan.info().clone());
+        }
+
+        if let Ok(webgpu) = Device::webgpu() {
+            devices.push(webgpu.info().clone());
+        }
+
+        devices
+    }
+
+    /// Benchmark devices for selection
+    pub fn benchmark_devices() -> Result<Vec<(DeviceInfo, f64)>> {
+        let devices = list_devices();
+        let mut results = Vec::new();
+
+        for device_info in devices {
+            let _device = match device_info.device_type {
+                DeviceType::Cpu => Device::cpu()?,
+                #[cfg(feature = "cuda")]
+                DeviceType::Cuda => Device::cuda()?,
+                DeviceType::Vulkan => Device::vulkan()?,
+                DeviceType::WebGpu => Device::webgpu()?,
+            };
+
+            let start = std::time::Instant::now();
+            // Run a simple benchmark kernel
+            benchmark_matrix_multiply(&_device)?;
+            let duration = start.elapsed().as_secs_f64();
+
+            results.push((device_info, duration));
+        }
+
+        // Sort by performance (lower time is better)
+        results.sort_by(|a, b| a.1.partial_cmp(&b.1).unwrap());
+        Ok(results)
+    }
+
+    fn benchmark_matrix_multiply(_device: &Device) -> Result<()> {
+        // Simple matrix multiplication benchmark
+        // This is a placeholder - real implementation would depend on kernel system
+        std::thread::sleep(std::time::Duration::from_millis(1));
+        Ok(())
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_device_auto_select() {
+        let device = Device::auto_select();
+        assert!(device.is_ok());
+        let device = device.unwrap();
+        println!("Auto-selected device: {:?}", device.device_type());
+    }
+
+    #[test]
+    fn test_cpu_device() {
+        let device = Device::cpu();
+        assert!(device.is_ok());
+        let device = device.unwrap();
+        assert_eq!(device.device_type(), DeviceType::Cpu);
+        assert!(device.supports_f64());
+    }
+
+    #[test]
+    fn test_list_devices() {
+        let devices = utils::list_devices();
+        assert!(!devices.is_empty());
+        // Should at least have CPU
+        assert!(devices.iter().any(|d| d.device_type == DeviceType::Cpu));
+    }
+
+    #[test]
+    fn test_device_info_display() {
+        let info = DeviceInfo {
+            name: "Test Device".to_string(),
+            device_type: DeviceType::Cpu,
+            memory_size: Some(8_000_000_000),
+            compute_units: Some(8),
+            supports_f16: false,
+            supports_f64: true,
+        };
+
+        assert_eq!(format!("{}", info.device_type), "CPU");
+    }
+}
