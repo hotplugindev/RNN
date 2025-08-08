@@ -4,7 +4,7 @@
 //! that work across different device backends with full GPU support.
 
 use crate::activations::Activation;
-use crate::device::{Device, DeviceType};
+use crate::device::DeviceType;
 use crate::error::{Result, RnnError};
 use crate::tensor::Tensor;
 use rayon::prelude::*;
@@ -76,7 +76,7 @@ fn cpu_binary_op(a: &Tensor, b: &Tensor, op: TensorOp) -> Result<Tensor> {
         _ => {
             return Err(RnnError::unsupported(
                 "Operation not supported for binary tensors",
-            ))
+            ));
         }
     };
 

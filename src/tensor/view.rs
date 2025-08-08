@@ -199,7 +199,7 @@ impl<'a> TensorView<'a> {
             .shape
             .iter()
             .zip(self.strides.iter())
-            .filter(|(&dim, _)| dim != 1)
+            .filter(|&(&dim, _)| dim != 1)
             .map(|(_, &stride)| stride)
             .collect();
 

@@ -1,7 +1,7 @@
 [package]
 name = "rnn"
 version = "0.1.0"
-edition = "2021"
+edition = "2024"
 authors = ["Giona Berti <mail@gberti.com>"]
 description = "A high-performance neural network library for Rust with CPU and GPU support"
 license = "MIT OR Apache-2.0"
@@ -23,11 +23,11 @@ path = "examples/mnist_gpu.rs"
 
 [[example]]
 name = "mnist_small"
-path = "examples/mnist.rs"
+path = "examples/mnist_small.rs"
 
 [[example]]
 name = "mnist_small_gpu"
-path = "examples/mnist_gpu.rs"
+path = "examples/mnist_small_gpu.rs"
 
 [[example]]
 name = "xor"

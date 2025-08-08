@@ -92,7 +92,7 @@ pub mod math {
         let correct = predictions
             .iter()
             .zip(targets.iter())
-            .filter(|(&pred, &target)| {
+            .filter(|&(&pred, &target)| {
                 let predicted_class = if pred > 0.5 { 1.0 } else { 0.0 };
                 (predicted_class - target).abs() < 0.5
             })

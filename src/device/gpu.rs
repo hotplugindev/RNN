@@ -6,7 +6,6 @@
 use crate::device::{Backend, DeviceInfo, DeviceMemory, DeviceType, Kernel};
 use crate::error::{Result, RnnError};
 
-use std::collections::HashMap;
 use std::sync::{Arc, Mutex};
 
 /// Vulkan compute backend (simplified implementation)

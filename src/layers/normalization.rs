@@ -210,7 +210,7 @@ impl BatchNormLayer {
         }
 
         // Apply affine transformation if enabled
-        if let (Some(ref weight), Some(ref bias)) = (&self.weight, &self.bias) {
+        if let (Some(weight), Some(bias)) = (&self.weight, &self.bias) {
             let weight_data = weight.to_vec()?;
             let bias_data = bias.to_vec()?;
             let mut output_data = normalized_data;

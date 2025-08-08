@@ -187,7 +187,7 @@ impl Tensor {
 
         let total_elements = shape.iter().product::<usize>();
         let mut rng = thread_rng();
-        let data: Vec<f32> = (0..total_elements).map(|_| rng.gen()).collect();
+        let data: Vec<f32> = (0..total_elements).map(|_| rng.r#gen()).collect();
 
         Self::from_slice(&data, shape)
     }

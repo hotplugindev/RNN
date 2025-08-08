@@ -57,7 +57,7 @@ impl DropoutLayer {
 
         let mask_data: Vec<f32> = (0..size)
             .map(|_| {
-                if rng.gen::<f32>() > self.dropout_rate {
+                if rng.r#gen::<f32>() > self.dropout_rate {
                     1.0 / (1.0 - self.dropout_rate) // Scale factor for kept elements
                 } else {
                     0.0
@@ -208,7 +208,7 @@ impl SpatialDropoutLayer {
         for _batch in 0..batch_size {
             for _channel in 0..channels {
                 // Decide whether to keep this entire channel
-                let keep_channel = rng.gen::<f32>() > self.dropout_rate;
+                let keep_channel = rng.r#gen::<f32>() > self.dropout_rate;
                 let channel_value = if keep_channel {
                     1.0 / (1.0 - self.dropout_rate) // Scale factor
                 } else {
