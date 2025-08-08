@@ -1,7 +1,7 @@
 //! Tensor module providing device-agnostic tensor operations
 //!
 //! This module implements a comprehensive tensor system that works seamlessly
-//! across CPU, CUDA, and Vulkan/WebGPU backends with automatic memory management
+//! across CPU,  and Vulkan backends with automatic memory management
 //! and optimized operations.
 
 use crate::device::{Device, DeviceMemory, DeviceType};

@@ -34,43 +34,82 @@ nnl = "0.1.0"
 use nnl::prelude::*;
 
 fn main() -> Result<()> {
+    // Select the CPU device
+    let device = Device::cpu()?;
+
+    // Create XOR training data
+    // Each input and target is a separate Tensor, typically a batch of size 1 for this example.
+    let train_inputs = vec![
+        Tensor::from_slice_on_device(&[0.0, 0.0], &[1, 2], device.clone())?,
+        Tensor::from_slice_on_device(&[0.0, 1.0], &[1, 2], device.clone())?,
+        Tensor::from_slice_on_device(&[1.0, 0.0], &[1, 2], device.clone())?,
+        Tensor::from_slice_on_device(&[1.0, 1.0], &[1, 2], device.clone())?,
+    ];
+
+    let train_targets = vec![
+        Tensor::from_slice_on_device(&[0.0], &[1, 1], device.clone())?,
+        Tensor::from_slice_on_device(&[1.0], &[1, 1], device.clone())?,
+        Tensor::from_slice_on_device(&[1.0], &[1, 1], device.clone())?,
+        Tensor::from_slice_on_device(&[0.0], &[1, 1], device.clone())?,
+    ];
+
     // Create a simple neural network
     let mut network = NetworkBuilder::new()
         .add_layer(LayerConfig::Dense {
             input_size: 2,
-            output_size: 4,
+            output_size: 8, // Hidden layer size
             activation: Activation::ReLU,
             use_bias: true,
             weight_init: WeightInit::Xavier,
         })
         .add_layer(LayerConfig::Dense {
-            input_size: 4,
+            input_size: 8, // Input to output layer
             output_size: 1,
             activation: Activation::Sigmoid,
             use_bias: true,
             weight_init: WeightInit::Xavier,
         })
-        .loss(LossFunction::BinaryCrossEntropy)
-        .optimizer(OptimizerConfig::Adam { learning_rate: 0.01 })
+        .loss(LossFunction::MeanSquaredError) // Common for regression/binary classification
+        .optimizer(OptimizerConfig::Adam {
+            learning_rate: 0.01,
+            beta1: 0.9,
+            beta2: 0.999,
+            epsilon: 1e-8,
+            weight_decay: None,
+            amsgrad: false,
+        })
+        .device(device.clone()) // Specify the device for the network
         .build()?;
 
-    // Training data for XOR problem
-    let inputs = Tensor::from_slice(&[
-        0.0, 0.0,  // XOR(0,0) = 0
-        0.0, 1.0,  // XOR(0,1) = 1
-        1.0, 0.0,  // XOR(1,0) = 1
-        1.0, 1.0,  // XOR(1,1) = 0
-    ], &[4, 2])?;
-
-    let targets = Tensor::from_slice(&[0.0, 1.0, 1.0, 0.0], &[4, 1])?;
+    // Configure training
+    let training_config = TrainingConfig {
+        epochs: 1000,
+        batch_size: 4, // Train on all 4 samples at once
+        verbose: false, // Set to true for detailed epoch logs
+        ..Default::default() // Use default values for other config fields
+    };
 
     // Train the network
-    network.train(&inputs, &targets, 1000)?;
+    network.train(&train_inputs, &train_targets, &training_config)?;
 
-    // Make predictions
-    let test_input = Tensor::from_slice(&[1.0, 0.0], &[1, 2])?;
-    let prediction = network.forward(&test_input)?;
-    println!("XOR(1,0) = {:.4}", prediction.to_vec()?[0]);
+    // Make predictions and evaluate
+    let test_input_00 = Tensor::from_slice_on_device(&[0.0, 0.0], &[1, 2], device.clone())?;
+    let test_input_01 = Tensor::from_slice_on_device(&[0.0, 1.0], &[1, 2], device.clone())?;
+    let test_input_10 = Tensor::from_slice_on_device(&[1.0, 0.0], &[1, 2], device.clone())?;
+    let test_input_11 = Tensor::from_slice_on_device(&[1.0, 1.0], &[1, 2], device)?;
+
+    let pred_00 = network.forward(&test_input_00)?.to_vec()?[0];
+    let pred_01 = network.forward(&test_input_01)?.to_vec()?[0];
+    let pred_10 = network.forward(&test_input_10)?.to_vec()?[0];
+    let pred_11 = network.forward(&test_input_11)?.to_vec()?[0];
+
+    // Print predictions, converting to binary (0 or 1)
+    println!(\"\\n--- XOR Predictions ---\");
+    println!(\"XOR(0,0) = {:.4} (class: {:.0})\", pred_00, if pred_00 > 0.5 { 1.0 } else { 0.0 });
+    println!(\"XOR(0,1) = {:.4} (class: {:.0})\", pred_01, if pred_01 > 0.5 { 1.0 } else { 0.0 });
+    println!(\"XOR(1,0) = {:.4} (class: {:.0})\", pred_10, if pred_10 > 0.5 { 1.0 } else { 0.0 });
+    println!(\"XOR(1,1) = {:.4} (class: {:.0})\", pred_11, if pred_11 > 0.5 { 1.0 } else { 0.0 });
+    println!(\"-------------------------\");
 
     Ok(())
 }
@@ -295,6 +334,16 @@ nnl = { version = "0.1.0", features = ["cpu-optimized"] }
 - Reduce batch size
 - Use gradient accumulation
 - Enable mixed precision training
+
+**HIP/ROCm `hip_runtime_api.h` not found**
+This error occurs when the `hip-runtime-sys` crate cannot find the necessary ROCm/HIP header files, typically during a build that enables the `rocm` feature.
+```bash
+# Set the HIP_PATH environment variable to your ROCm installation directory.
+# For example, if ROCm is installed at /opt/rocm:
+export HIP_PATH=/opt/rocm
+# Verify that $HIP_PATH/include/hip/hip_runtime_api.h exists.
+```
+This is often required for `docs.rs` builds or local builds on systems with ROCm.
 
 ## API Documentation
 

@@ -1,7 +1,7 @@
 //! Device and backend abstraction layer
 //!
 //! This module provides a unified interface for different compute backends
-//! including CPU, CUDA, and Vulkan/WGPU compute shaders.
+//! including CPU, and Vulkan compute shaders.
 
 use crate::error::Result;
 use std::fmt;
@@ -10,17 +10,11 @@ use std::sync::Arc;
 pub mod cpu;
 pub mod gpu;
 
-#[cfg(feature = "cuda")]
-pub mod cuda;
-
 /// Available device types
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub enum DeviceType {
     /// CPU execution with SIMD optimizations
     Cpu,
-    /// NVIDIA CUDA GPU
-    #[cfg(feature = "cuda")]
-    Cuda,
     /// Vulkan compute shaders (AMD/Intel/NVIDIA)
     Vulkan,
 }
@@ -29,8 +23,6 @@ impl fmt::Display for DeviceType {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
             DeviceType::Cpu => write!(f, "CPU"),
-            #[cfg(feature = "cuda")]
-            DeviceType::Cuda => write!(f, "CUDA"),
             DeviceType::Vulkan => write!(f, "Vulkan"),
         }
     }
@@ -41,7 +33,7 @@ impl fmt::Display for DeviceType {
 pub struct DeviceInfo {
     /// Device name identifier
     pub name: String,
-    /// Type of the device (CPU, CUDA, Vulkan, etc.)
+    /// Type of the device (CPU, Vulkan, etc.)
     pub device_type: DeviceType,
     /// Available memory in bytes
     pub memory_size: Option<u64>,
@@ -70,12 +62,6 @@ impl Device {
     pub fn auto_select() -> Result<Self> {
         // Try GPU backends first, then fall back to CPU
 
-        #[cfg(feature = "cuda")]
-        if let Ok(device) = Self::cuda() {
-            log::info!("Selected CUDA device: {}", device.info.name);
-            return Ok(device);
-        }
-
         if let Ok(device) = Self::vulkan() {
             log::info!("Selected Vulkan device: {}", device.info.name);
             return Ok(device);
@@ -98,14 +84,6 @@ impl Device {
             supports_f16: false,
             supports_f64: true,
         };
-        Ok(Self::new(backend, info))
-    }
-
-    #[cfg(feature = "cuda")]
-    /// Create a CUDA device
-    pub fn cuda() -> Result<Self> {
-        let backend = Arc::new(cuda::CudaBackend::new()?);
-        let info = backend.device_info()?;
         Ok(Self::new(backend, info))
     }
 
@@ -260,11 +238,6 @@ pub mod utils {
             devices.push(cpu.info().clone());
         }
 
-        #[cfg(feature = "cuda")]
-        if let Ok(cuda) = Device::cuda() {
-            devices.push(cuda.info().clone());
-        }
-
         if let Ok(vulkan) = Device::vulkan() {
             devices.push(vulkan.info().clone());
         }
@@ -280,8 +253,6 @@ pub mod utils {
         for device_info in devices {
             let _device = match device_info.device_type {
                 DeviceType::Cpu => Device::cpu()?,
-                #[cfg(feature = "cuda")]
-                DeviceType::Cuda => Device::cuda()?,
                 DeviceType::Vulkan => Device::vulkan()?,
             };
 

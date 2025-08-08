@@ -130,12 +130,6 @@ pub fn scalar_op(tensor: &Tensor, scalar: f32, op: TensorOp) -> Result<Tensor> {
     match tensor.device().device_type() {
         DeviceType::Cpu => cpu_scalar_op(tensor, scalar, op),
         DeviceType::Vulkan => gpu_scalar_op(tensor, scalar, op),
-        #[cfg(feature = "cuda")]
-        DeviceType::Cuda => {
-            let cpu_tensor = tensor.to_host()?;
-            let result = cpu_scalar_op(&cpu_tensor, scalar, op)?;
-            result.to_device(tensor.device().clone())
-        }
     }
 }
 
@@ -302,12 +296,6 @@ pub fn activation(input: &Tensor, activation: Activation) -> Result<Tensor> {
     match input.device().device_type() {
         DeviceType::Cpu => cpu_activation(input, activation),
         DeviceType::Vulkan => gpu_activation(input, activation),
-        #[cfg(feature = "cuda")]
-        DeviceType::Cuda => {
-            let cpu_tensor = input.to_host()?;
-            let result = cpu_activation(&cpu_tensor, activation)?;
-            result.to_device(input.device().clone())
-        }
     }
 }
 
@@ -316,12 +304,6 @@ pub fn sqrt(tensor: &Tensor) -> Result<Tensor> {
     match tensor.device().device_type() {
         DeviceType::Cpu => cpu_sqrt(tensor),
         DeviceType::Vulkan => gpu_sqrt(tensor),
-        #[cfg(feature = "cuda")]
-        DeviceType::Cuda => {
-            let cpu_tensor = tensor.to_host()?;
-            let result = cpu_sqrt(&cpu_tensor)?;
-            result.to_device(tensor.device().clone())
-        }
     }
 }
 
@@ -336,12 +318,6 @@ pub fn transpose(tensor: &Tensor) -> Result<Tensor> {
     match tensor.device().device_type() {
         DeviceType::Cpu => cpu_transpose(tensor),
         DeviceType::Vulkan => gpu_transpose(tensor),
-        #[cfg(feature = "cuda")]
-        DeviceType::Cuda => {
-            let cpu_tensor = tensor.to_host()?;
-            let result = cpu_transpose(&cpu_tensor)?;
-            result.to_device(tensor.device().clone())
-        }
     }
 }
 

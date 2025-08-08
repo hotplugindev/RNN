@@ -79,12 +79,6 @@ vulkano = { version = "0.34", features = ["serde"] }
 vulkano-shaders = "0.34"
 vulkano-util = "0.34"
 
-# CUDA support (optional)
-cudarc = { version = "0.10", features = ["f16"], optional = true }
-
-# ROCm/HIP support (optional)
-hip-sys = { version = "0.1.1", optional = true }
-
 # CPU optimizations
 openblas-src = { version = "0.10", features = [
     "cblas",
@@ -122,11 +116,8 @@ tempfile = "3.8"
 [features]
 default = ["cpu-optimized", "examples"]
 cpu-optimized = ["openblas-src"]
-cuda = ["cudarc"]
-rocm = ["hip-sys"]
 intel-mkl = ["intel-mkl-src"]
 examples = ["clap", "image"]
-all-backends = ["cuda", "rocm", "cpu-optimized"]
 
 
 [package.metadata.docs.rs]

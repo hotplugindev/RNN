@@ -4,7 +4,7 @@
 //!
 //! ## Features
 //!
-//! - **Multi-backend Support**: NVIDIA CUDA, AMD ROCm/Vulkan, and optimized CPU execution
+//! - **Multi-backend Support**: Vulkan, and optimized CPU execution
 //! - **Automatic Hardware Detection**: Seamlessly selects the best available compute backend
 //! - **Multiple Training Methods**: Backpropagation, Newton's method, and advanced optimizers
 //! - **Flexible Architecture**: Support for both linear and convolutional networks

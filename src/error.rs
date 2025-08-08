@@ -60,11 +60,6 @@ pub enum NnlError {
     #[error("JSON error: {0}")]
     JsonError(#[from] serde_json::Error),
 
-    /// CUDA-specific errors
-    #[cfg(feature = "cuda")]
-    #[error("CUDA error: {0}")]
-    CudaError(String),
-
     /// Vulkan/WGPU errors
     #[error("GPU compute error: {0}")]
     GpuError(String),
@@ -185,12 +180,6 @@ impl NnlError {
     /// Create an I/O error
     pub fn io(error: std::io::Error) -> Self {
         Self::IoError(error)
-    }
-
-    #[cfg(feature = "cuda")]
-    /// Create a CUDA error
-    pub fn cuda<S: Into<String>>(message: S) -> Self {
-        Self::CudaError(message.into())
     }
 }
 
