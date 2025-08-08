@@ -1,4 +1,4 @@
-//! # NNL - Rust Neural Network Library
+//! # NNL - Neural Network Library
 //!
 //! A high-performance neural network library for Rust with comprehensive GPU and CPU support.
 //!
