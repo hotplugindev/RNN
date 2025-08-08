@@ -3,7 +3,7 @@
 //! This module provides implementations for various pooling operations
 //! commonly used in convolutional neural networks.
 
-use crate::error::{Result, RnnError};
+use crate::error::{NnlError, Result};
 use crate::layers::{Layer, TrainingMode};
 use crate::tensor::Tensor;
 // Note: Serialization is not implemented for layers containing Tensor fields
@@ -43,7 +43,7 @@ impl MaxPool2DLayer {
 impl Layer for MaxPool2DLayer {
     fn forward(&mut self, input: &Tensor, training: TrainingMode) -> Result<Tensor> {
         if input.shape().len() != 4 {
-            return Err(RnnError::tensor("MaxPool2D expects 4D input [N, C, H, W]"));
+            return Err(NnlError::tensor("MaxPool2D expects 4D input [N, C, H, W]"));
         }
 
         self.set_training(matches!(training, TrainingMode::Training));
@@ -104,7 +104,7 @@ impl Layer for MaxPool2DLayer {
         let input = self
             .cached_input
             .as_ref()
-            .ok_or_else(|| RnnError::training("No cached input for backward pass"))?;
+            .ok_or_else(|| NnlError::training("No cached input for backward pass"))?;
 
         // Simplified backward pass - real implementation would compute proper gradients
         // For now, just return gradient with same shape as input
@@ -172,7 +172,7 @@ impl MaxPool2DLayer {
     /// Compute output shape after pooling
     fn compute_output_shape(&self, input_shape: &[usize]) -> Result<Vec<usize>> {
         if input_shape.len() != 4 {
-            return Err(RnnError::tensor("Expected 4D input shape"));
+            return Err(NnlError::tensor("Expected 4D input shape"));
         }
 
         let [batch_size, channels, height, width] = [
@@ -228,7 +228,7 @@ impl AvgPool2DLayer {
 impl Layer for AvgPool2DLayer {
     fn forward(&mut self, input: &Tensor, training: TrainingMode) -> Result<Tensor> {
         if input.shape().len() != 4 {
-            return Err(RnnError::tensor("AvgPool2D expects 4D input [N, C, H, W]"));
+            return Err(NnlError::tensor("AvgPool2D expects 4D input [N, C, H, W]"));
         }
 
         self.set_training(matches!(training, TrainingMode::Training));
@@ -289,7 +289,7 @@ impl Layer for AvgPool2DLayer {
         let input = self
             .cached_input
             .as_ref()
-            .ok_or_else(|| RnnError::training("No cached input for backward pass"))?;
+            .ok_or_else(|| NnlError::training("No cached input for backward pass"))?;
 
         // Simplified backward pass - real implementation would compute proper gradients
         // For now, just return gradient with same shape as input
@@ -357,7 +357,7 @@ impl AvgPool2DLayer {
     /// Compute output shape after pooling
     fn compute_output_shape(&self, input_shape: &[usize]) -> Result<Vec<usize>> {
         if input_shape.len() != 4 {
-            return Err(RnnError::tensor("Expected 4D input shape"));
+            return Err(NnlError::tensor("Expected 4D input shape"));
         }
 
         let [batch_size, channels, height, width] = [
@@ -413,7 +413,7 @@ impl Layer for FlattenLayer {
         let end_dim = self.end_dim.unwrap_or(input_shape.len() - 1);
 
         if self.start_dim > end_dim || end_dim >= input_shape.len() {
-            return Err(RnnError::tensor("Invalid flatten dimensions"));
+            return Err(NnlError::tensor("Invalid flatten dimensions"));
         }
 
         // Calculate flattened size
@@ -440,7 +440,7 @@ impl Layer for FlattenLayer {
         let original_shape = self
             .cached_shape
             .as_ref()
-            .ok_or_else(|| RnnError::training("No cached shape for backward pass"))?;
+            .ok_or_else(|| NnlError::training("No cached shape for backward pass"))?;
 
         grad_output.reshape(original_shape)
     }
@@ -473,7 +473,7 @@ impl Layer for FlattenLayer {
         let end_dim = self.end_dim.unwrap_or(input_shape.len() - 1);
 
         if self.start_dim > end_dim || end_dim >= input_shape.len() {
-            return Err(RnnError::tensor("Invalid flatten dimensions"));
+            return Err(NnlError::tensor("Invalid flatten dimensions"));
         }
 
         let mut output_shape = Vec::new();
@@ -555,7 +555,7 @@ impl Layer for ReshapeLayer {
         let target_size: usize = self.target_shape.iter().product();
 
         if input_size != target_size {
-            return Err(RnnError::tensor(&format!(
+            return Err(NnlError::tensor(&format!(
                 "Cannot reshape tensor: input size {} does not match target size {}",
                 input_size, target_size
             )));
@@ -568,7 +568,7 @@ impl Layer for ReshapeLayer {
         let original_shape = self
             .cached_shape
             .as_ref()
-            .ok_or_else(|| RnnError::training("No cached shape for backward pass"))?;
+            .ok_or_else(|| NnlError::training("No cached shape for backward pass"))?;
 
         grad_output.reshape(original_shape)
     }
@@ -602,7 +602,7 @@ impl Layer for ReshapeLayer {
         let target_size: usize = self.target_shape.iter().product();
 
         if input_size != target_size {
-            return Err(RnnError::tensor(&format!(
+            return Err(NnlError::tensor(&format!(
                 "Cannot reshape tensor: input size {} does not match target size {}",
                 input_size, target_size
             )));

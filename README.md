@@ -1,13 +1,13 @@
-# RNN - Rust Neural Network Library
+# NNL - Neural Network Library
 
-![RNN Logo](rnn.png)
+![NNR Logo](nnl.png)
 
 A high-performance neural network library for Rust with comprehensive GPU and CPU support.
 
-[![Crates.io](https://img.shields.io/crates/v/rnn.svg)](https://crates.io/crates/rnn)
-[![Documentation](https://docs.rs/rnn/badge.svg)](https://docs.rs/rnn)
+[![Crates.io](https://img.shields.io/crates/v/nnl.svg)](https://crates.io/crates/nnl)
+[![Documentation](https://docs.rs/nnl/badge.svg)](https://docs.rs/nnl)
 [![License](https://img.shields.io/badge/license-MIT%2FApache--2.0-blue.svg)](#license)
-[![Build Status](https://github.com/hotplugindev/rnn/workflows/CI/badge.svg)](https://github.com/hotplugindev/rnn/actions)
+[![Build Status](https://github.com/hotplugindev/nnl/workflows/CI/badge.svg)](https://github.com/hotplugindev/nnl/actions)
 
 ## Features
 
@@ -26,13 +26,13 @@ Add this to your `Cargo.toml`:
 
 ```toml
 [dependencies]
-rnn = "0.1.0"
+nnl = "0.1.0"
 ```
 
 ### Basic XOR Example
 
 ```rust
-use rnn::prelude::*;
+use nnl::prelude::*;
 
 fn main() -> Result<()> {
     // Create a simple neural network
@@ -83,18 +83,18 @@ fn main() -> Result<()> {
 
 ```toml
 [dependencies]
-rnn = "0.1.0"
+nnl = "0.1.0"
 ```
 
 ### With GPU Support
 
 ```toml
 [dependencies]
-rnn = { version = "0.1.0", features = ["cuda"] }  # NVIDIA CUDA
+nnl = { version = "0.1.0", features = ["cuda"] }  # NVIDIA CUDA
 # or
-rnn = { version = "0.1.0", features = ["vulkan"] } # Vulkan (AMD/Intel/NVIDIA)
+nnl = { version = "0.1.0", features = ["vulkan"] } # Vulkan (AMD/Intel/NVIDIA)
 # or
-rnn = { version = "0.1.0", features = ["all-backends"] } # All GPU backends
+nnl = { version = "0.1.0", features = ["all-backends"] } # All GPU backends
 ```
 
 ### System Requirements
@@ -259,7 +259,7 @@ Performance comparison on common tasks (Intel i7-10700K, RTX 3080):
 
 | Feature | Description | Example |
 |---------|-------------|---------|
-| `default` | CPU-optimized backend | `rnn = "0.1.0"` |
+| `default` | CPU-optimized backend | `nnl = "0.1.0"` |
 | `cuda` | NVIDIA CUDA support | `features = ["cuda"]` |
 | `vulkan` | Vulkan compute support | `features = ["vulkan"]` |
 | `rocm` | AMD ROCm support (experimental) | `features = ["rocm"]` |
@@ -289,7 +289,7 @@ sudo apt install vulkan-tools vulkan-loader-dev  # Ubuntu/Debian
 **Slow CPU performance**
 ```toml
 # Enable CPU optimizations
-rnn = { version = "0.1.0", features = ["cpu-optimized"] }
+nnl = { version = "0.1.0", features = ["cpu-optimized"] }
 ```
 
 **Out of memory on GPU**
@@ -299,14 +299,14 @@ rnn = { version = "0.1.0", features = ["cpu-optimized"] }
 
 ## API Documentation
 
-For detailed API documentation, see [docs.rs/rnn](https://docs.rs/rnn).
+For detailed API documentation, see [docs.rs/nnl](https://docs.rs/nnl).
 
 Key modules:
-- [`tensor`](https://docs.rs/rnn/latest/rnn/tensor/) - Tensor operations and data structures
-- [`network`](https://docs.rs/rnn/latest/rnn/network/) - Neural network building and training
-- [`layers`](https://docs.rs/rnn/latest/rnn/layers/) - Layer implementations and configurations
-- [`optimizers`](https://docs.rs/rnn/latest/rnn/optimizers/) - Optimization algorithms
-- [`device`](https://docs.rs/rnn/latest/rnn/device/) - Device management and backend selection
+- [`tensor`](https://docs.rs/nnl/latest/nnl/tensor/) - Tensor operations and data structures
+- [`network`](https://docs.rs/nnl/latest/nnl/network/) - Neural network building and training
+- [`layers`](https://docs.rs/nnl/latest/nnl/layers/) - Layer implementations and configurations
+- [`optimizers`](https://docs.rs/nnl/latest/nnl/optimizers/) - Optimization algorithms
+- [`device`](https://docs.rs/nnl/latest/nnl/device/) - Device management and backend selection
 
 ## Contributing
 
@@ -323,8 +323,8 @@ For major changes, please open an issue first to discuss the proposed changes.
 ### Development Setup
 
 ```bash
-git clone https://github.com/hotplugindev/rnn.git
-cd rnn
+git clone https://github.com/hotplugindev/NNL.git
+cd NNL
 cargo build
 cargo test
 cargo run --example xor
@@ -356,4 +356,4 @@ at your option.
 
 ---
 
-**Questions?** Check out our [FAQ](docs/FAQ.md) or open an [issue](https://github.com/hotplugindev/rnn/issues).
+**Questions?** Check out our [FAQ](docs/FAQ.md) or open an [issue](https://github.com/hotplugindev/nnl/issues).

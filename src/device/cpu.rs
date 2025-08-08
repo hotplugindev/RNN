@@ -4,9 +4,9 @@
 //! and multi-threading for neural network operations.
 
 use crate::device::{Backend, DeviceInfo, DeviceMemory, DeviceType, Kernel};
-use crate::error::{Result, RnnError};
+use crate::error::{NnlError, Result};
 use rayon::prelude::*;
-use std::alloc::{alloc, dealloc, Layout};
+use std::alloc::{Layout, alloc, dealloc};
 use std::ptr::NonNull;
 use std::sync::Arc;
 
@@ -22,7 +22,7 @@ impl CpuBackend {
         let thread_pool = rayon::ThreadPoolBuilder::new()
             .num_threads(num_threads)
             .build()
-            .map_err(|e| RnnError::device(format!("Failed to create thread pool: {}", e)))?;
+            .map_err(|e| NnlError::device(format!("Failed to create thread pool: {}", e)))?;
 
         Ok(Self {
             thread_pool: Arc::new(thread_pool),
@@ -57,7 +57,7 @@ impl Backend for CpuBackend {
         let cpu_memory = memory
             .as_any()
             .downcast_ref::<CpuMemory>()
-            .ok_or_else(|| RnnError::device("Invalid memory type for CPU backend"))?;
+            .ok_or_else(|| NnlError::device("Invalid memory type for CPU backend"))?;
 
         unsafe {
             let ptr = cpu_memory.as_ptr() as *mut f32;
@@ -70,7 +70,7 @@ impl Backend for CpuBackend {
         let cpu_memory = memory
             .as_any()
             .downcast_ref::<CpuMemory>()
-            .ok_or_else(|| RnnError::device("Invalid memory type for CPU backend"))?;
+            .ok_or_else(|| NnlError::device("Invalid memory type for CPU backend"))?;
 
         cpu_memory.copy_to_slice(data)
     }
@@ -84,7 +84,7 @@ impl Backend for CpuBackend {
         let cpu_kernel = kernel
             .as_any()
             .downcast_ref::<CpuKernel>()
-            .ok_or_else(|| RnnError::device("Invalid kernel type for CPU backend"))?;
+            .ok_or_else(|| NnlError::device("Invalid kernel type for CPU backend"))?;
 
         cpu_kernel.execute(inputs, outputs)
     }
@@ -115,16 +115,16 @@ impl CpuMemory {
     /// Create new CPU memory buffer
     pub fn new(size: usize) -> Result<Self> {
         if size == 0 {
-            return Err(RnnError::memory("Cannot allocate zero-sized memory"));
+            return Err(NnlError::memory("Cannot allocate zero-sized memory"));
         }
 
         let layout = Layout::array::<f32>(size)
-            .map_err(|e| RnnError::memory(format!("Invalid memory layout: {}", e)))?;
+            .map_err(|e| NnlError::memory(format!("Invalid memory layout: {}", e)))?;
 
         let ptr = unsafe { alloc(layout) as *mut f32 };
 
         if ptr.is_null() {
-            return Err(RnnError::memory("Failed to allocate memory"));
+            return Err(NnlError::memory("Failed to allocate memory"));
         }
 
         // Initialize memory to zero
@@ -162,7 +162,7 @@ impl CpuMemory {
     /// Copy data from slice
     pub fn copy_from_slice(&mut self, data: &[f32]) -> Result<()> {
         if data.len() != self.size {
-            return Err(RnnError::shape_mismatch(&[self.size], &[data.len()]));
+            return Err(NnlError::shape_mismatch(&[self.size], &[data.len()]));
         }
 
         unsafe {
@@ -175,7 +175,7 @@ impl CpuMemory {
     /// Copy data to slice
     pub fn copy_to_slice(&self, data: &mut [f32]) -> Result<()> {
         if data.len() != self.size {
-            return Err(RnnError::shape_mismatch(&[self.size], &[data.len()]));
+            return Err(NnlError::shape_mismatch(&[self.size], &[data.len()]));
         }
 
         unsafe {
@@ -314,7 +314,7 @@ impl CpuOperation {
 
     fn matrix_multiply(inputs: &[&dyn DeviceMemory], outputs: &[&dyn DeviceMemory]) -> Result<()> {
         if inputs.len() != 2 || outputs.len() != 1 {
-            return Err(RnnError::device(
+            return Err(NnlError::device(
                 "Matrix multiply requires 2 inputs and 1 output",
             ));
         }
@@ -322,17 +322,17 @@ impl CpuOperation {
         let a_memory = inputs[0]
             .as_any()
             .downcast_ref::<CpuMemory>()
-            .ok_or_else(|| RnnError::device("Invalid input memory type"))?;
+            .ok_or_else(|| NnlError::device("Invalid input memory type"))?;
 
         let b_memory = inputs[1]
             .as_any()
             .downcast_ref::<CpuMemory>()
-            .ok_or_else(|| RnnError::device("Invalid input memory type"))?;
+            .ok_or_else(|| NnlError::device("Invalid input memory type"))?;
 
         let c_memory = outputs[0]
             .as_any()
             .downcast_ref::<CpuMemory>()
-            .ok_or_else(|| RnnError::device("Invalid output memory type"))?;
+            .ok_or_else(|| NnlError::device("Invalid output memory type"))?;
 
         // For now, implement basic matrix multiplication
         // In a real implementation, this would use optimized BLAS routines
@@ -364,7 +364,7 @@ impl CpuOperation {
 
     fn elementwise_add(inputs: &[&dyn DeviceMemory], outputs: &[&dyn DeviceMemory]) -> Result<()> {
         if inputs.len() != 2 || outputs.len() != 1 {
-            return Err(RnnError::device(
+            return Err(NnlError::device(
                 "Elementwise add requires 2 inputs and 1 output",
             ));
         }
@@ -372,17 +372,17 @@ impl CpuOperation {
         let a_memory = inputs[0]
             .as_any()
             .downcast_ref::<CpuMemory>()
-            .ok_or_else(|| RnnError::device("Invalid input memory type"))?;
+            .ok_or_else(|| NnlError::device("Invalid input memory type"))?;
 
         let b_memory = inputs[1]
             .as_any()
             .downcast_ref::<CpuMemory>()
-            .ok_or_else(|| RnnError::device("Invalid input memory type"))?;
+            .ok_or_else(|| NnlError::device("Invalid input memory type"))?;
 
         let c_memory = outputs[0]
             .as_any()
             .downcast_ref::<CpuMemory>()
-            .ok_or_else(|| RnnError::device("Invalid output memory type"))?;
+            .ok_or_else(|| NnlError::device("Invalid output memory type"))?;
 
         let a = a_memory.as_slice();
         let b = b_memory.as_slice();
@@ -393,7 +393,7 @@ impl CpuOperation {
                 std::slice::from_raw_parts_mut(c_ptr, c_memory.size() / std::mem::size_of::<f32>());
 
             if a.len() != b.len() || a.len() != c_slice.len() {
-                return Err(RnnError::device("Input and output sizes must match"));
+                return Err(NnlError::device("Input and output sizes must match"));
             }
 
             // Parallel elementwise addition with SIMD optimization
@@ -413,7 +413,7 @@ impl CpuOperation {
         outputs: &[&dyn DeviceMemory],
     ) -> Result<()> {
         if inputs.len() != 2 || outputs.len() != 1 {
-            return Err(RnnError::device(
+            return Err(NnlError::device(
                 "Elementwise multiply requires 2 inputs and 1 output",
             ));
         }
@@ -421,17 +421,17 @@ impl CpuOperation {
         let a_memory = inputs[0]
             .as_any()
             .downcast_ref::<CpuMemory>()
-            .ok_or_else(|| RnnError::device("Invalid input memory type"))?;
+            .ok_or_else(|| NnlError::device("Invalid input memory type"))?;
 
         let b_memory = inputs[1]
             .as_any()
             .downcast_ref::<CpuMemory>()
-            .ok_or_else(|| RnnError::device("Invalid input memory type"))?;
+            .ok_or_else(|| NnlError::device("Invalid input memory type"))?;
 
         let c_memory = outputs[0]
             .as_any()
             .downcast_ref::<CpuMemory>()
-            .ok_or_else(|| RnnError::device("Invalid output memory type"))?;
+            .ok_or_else(|| NnlError::device("Invalid output memory type"))?;
 
         let a = a_memory.as_slice();
         let b = b_memory.as_slice();
@@ -442,7 +442,7 @@ impl CpuOperation {
                 std::slice::from_raw_parts_mut(c_ptr, c_memory.size() / std::mem::size_of::<f32>());
 
             if a.len() != b.len() || a.len() != c_slice.len() {
-                return Err(RnnError::device("Input and output sizes must match"));
+                return Err(NnlError::device("Input and output sizes must match"));
             }
 
             // Parallel elementwise multiplication
@@ -460,7 +460,7 @@ impl CpuOperation {
     fn convolution_2d(_inputs: &[&dyn DeviceMemory], _outputs: &[&dyn DeviceMemory]) -> Result<()> {
         // Placeholder for 2D convolution implementation
         // Real implementation would include optimized convolution algorithms
-        Err(RnnError::unsupported("2D convolution not yet implemented"))
+        Err(NnlError::unsupported("2D convolution not yet implemented"))
     }
 
     fn activation(
@@ -469,18 +469,18 @@ impl CpuOperation {
         activation: &ActivationType,
     ) -> Result<()> {
         if inputs.len() != 1 || outputs.len() != 1 {
-            return Err(RnnError::device("Activation requires 1 input and 1 output"));
+            return Err(NnlError::device("Activation requires 1 input and 1 output"));
         }
 
         let input_memory = inputs[0]
             .as_any()
             .downcast_ref::<CpuMemory>()
-            .ok_or_else(|| RnnError::device("Invalid input memory type"))?;
+            .ok_or_else(|| NnlError::device("Invalid input memory type"))?;
 
         let output_memory = outputs[0]
             .as_any()
             .downcast_ref::<CpuMemory>()
-            .ok_or_else(|| RnnError::device("Invalid output memory type"))?;
+            .ok_or_else(|| NnlError::device("Invalid output memory type"))?;
 
         let input = input_memory.as_slice();
 
@@ -492,7 +492,7 @@ impl CpuOperation {
             );
 
             if input.len() != output.len() {
-                return Err(RnnError::device("Input and output must have the same size"));
+                return Err(NnlError::device("Input and output must have the same size"));
             }
 
             match activation {
@@ -551,18 +551,18 @@ impl CpuOperation {
         reduction: &ReductionType,
     ) -> Result<()> {
         if inputs.len() != 1 || outputs.len() != 1 {
-            return Err(RnnError::device("Reduction requires 1 input and 1 output"));
+            return Err(NnlError::device("Reduction requires 1 input and 1 output"));
         }
 
         let input_memory = inputs[0]
             .as_any()
             .downcast_ref::<CpuMemory>()
-            .ok_or_else(|| RnnError::device("Invalid input memory type"))?;
+            .ok_or_else(|| NnlError::device("Invalid input memory type"))?;
 
         let output_memory = outputs[0]
             .as_any()
             .downcast_ref::<CpuMemory>()
-            .ok_or_else(|| RnnError::device("Invalid output memory type"))?;
+            .ok_or_else(|| NnlError::device("Invalid output memory type"))?;
 
         let input = input_memory.as_slice();
 
@@ -574,7 +574,7 @@ impl CpuOperation {
             );
 
             if output.len() != 1 {
-                return Err(RnnError::device("Reduction output must be scalar"));
+                return Err(NnlError::device("Reduction output must be scalar"));
             }
 
             let result = match reduction {

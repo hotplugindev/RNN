@@ -5,7 +5,7 @@
 
 use crate::activations::Activation;
 use crate::device::DeviceType;
-use crate::error::{Result, RnnError};
+use crate::error::{NnlError, Result};
 use crate::tensor::Tensor;
 use rayon::prelude::*;
 
@@ -33,7 +33,7 @@ pub enum TensorOp {
 /// Perform binary operation between two tensors
 pub fn binary_op(a: &Tensor, b: &Tensor, op: TensorOp) -> Result<Tensor> {
     if a.shape() != b.shape() {
-        return Err(RnnError::shape_mismatch(a.shape(), b.shape()));
+        return Err(NnlError::shape_mismatch(a.shape(), b.shape()));
     }
 
     match (a.device().device_type(), b.device().device_type()) {
@@ -74,7 +74,7 @@ fn cpu_binary_op(a: &Tensor, b: &Tensor, op: TensorOp) -> Result<Tensor> {
             .map(|(&x, &y)| x / y)
             .collect(),
         _ => {
-            return Err(RnnError::unsupported(
+            return Err(NnlError::unsupported(
                 "Operation not supported for binary tensors",
             ));
         }
@@ -87,7 +87,7 @@ fn cpu_binary_op(a: &Tensor, b: &Tensor, op: TensorOp) -> Result<Tensor> {
 fn gpu_binary_op(a: &Tensor, b: &Tensor, op: TensorOp) -> Result<Tensor> {
     // Validate tensor compatibility
     if a.shape() != b.shape() {
-        return Err(RnnError::shape_mismatch(a.shape(), b.shape()));
+        return Err(NnlError::shape_mismatch(a.shape(), b.shape()));
     }
 
     let backend = a.device().backend();
@@ -105,7 +105,7 @@ fn gpu_binary_op(a: &Tensor, b: &Tensor, op: TensorOp) -> Result<Tensor> {
         TensorOp::Sub => "elementwise_sub",
         TensorOp::Mul => "elementwise_mul",
         TensorOp::Div => "elementwise_div",
-        _ => return Err(RnnError::unsupported("Unsupported GPU binary operation")),
+        _ => return Err(NnlError::unsupported("Unsupported GPU binary operation")),
     };
 
     // Create kernel
@@ -146,7 +146,7 @@ fn cpu_scalar_op(tensor: &Tensor, scalar: f32, op: TensorOp) -> Result<Tensor> {
     let result_data: Vec<f32> = match op {
         TensorOp::AddScalar => data.par_iter().map(|&x| x + scalar).collect(),
         TensorOp::MulScalar => data.par_iter().map(|&x| x * scalar).collect(),
-        _ => return Err(RnnError::unsupported("Unsupported scalar operation")),
+        _ => return Err(NnlError::unsupported("Unsupported scalar operation")),
     };
 
     Tensor::from_slice_on_device(&result_data, tensor.shape(), tensor.device().clone())
@@ -166,7 +166,7 @@ fn gpu_scalar_op(tensor: &Tensor, scalar: f32, op: TensorOp) -> Result<Tensor> {
     let kernel_name = match op {
         TensorOp::AddScalar => "scalar_add",
         TensorOp::MulScalar => "scalar_mul",
-        _ => return Err(RnnError::unsupported("Unsupported GPU scalar operation")),
+        _ => return Err(NnlError::unsupported("Unsupported GPU scalar operation")),
     };
 
     // Create uniform buffer for scalar
@@ -200,7 +200,7 @@ fn gpu_scalar_op(tensor: &Tensor, scalar: f32, op: TensorOp) -> Result<Tensor> {
 pub fn matmul(a: &Tensor, b: &Tensor) -> Result<Tensor> {
     // Validate shapes for matrix multiplication
     if a.ndim() != 2 || b.ndim() != 2 {
-        return Err(RnnError::invalid_input(
+        return Err(NnlError::invalid_input(
             "Matrix multiplication requires 2D tensors",
         ));
     }
@@ -209,7 +209,7 @@ pub fn matmul(a: &Tensor, b: &Tensor) -> Result<Tensor> {
     let b_shape = b.shape();
 
     if a_shape[1] != b_shape[0] {
-        return Err(RnnError::shape_mismatch(a_shape, b_shape));
+        return Err(NnlError::shape_mismatch(a_shape, b_shape));
     }
 
     let output_shape = vec![a_shape[0], b_shape[1]];
@@ -328,7 +328,7 @@ pub fn sqrt(tensor: &Tensor) -> Result<Tensor> {
 /// Matrix transpose operation
 pub fn transpose(tensor: &Tensor) -> Result<Tensor> {
     if tensor.ndim() < 2 {
-        return Err(RnnError::tensor(
+        return Err(NnlError::tensor(
             "Cannot transpose tensor with less than 2 dimensions",
         ));
     }
@@ -410,7 +410,7 @@ fn gpu_activation(input: &Tensor, activation: Activation) -> Result<Tensor> {
         Activation::Tanh => "tanh",
         Activation::Softmax => "softmax",
         Activation::Linear => return Ok(input.clone()),
-        _ => return Err(RnnError::unsupported("Activation not implemented on GPU")),
+        _ => return Err(NnlError::unsupported("Activation not implemented on GPU")),
     };
 
     // Get input memory
@@ -485,7 +485,7 @@ fn cpu_sqrt(tensor: &Tensor) -> Result<Tensor> {
     if let TensorData::Host(ref array) = tensor.data {
         let result_data: Vec<f32> = array.iter().map(|&x| x.sqrt()).collect();
         let result_array = ArrayD::from_shape_vec(IxDyn(&tensor.shape), result_data)
-            .map_err(|e| RnnError::tensor(&format!("Shape error in sqrt: {}", e)))?;
+            .map_err(|e| NnlError::tensor(&format!("Shape error in sqrt: {}", e)))?;
 
         Ok(Tensor {
             data: TensorData::Host(result_array),
@@ -495,7 +495,7 @@ fn cpu_sqrt(tensor: &Tensor) -> Result<Tensor> {
             grad: None,
         })
     } else {
-        Err(RnnError::tensor("Expected host tensor for CPU sqrt"))
+        Err(NnlError::tensor("Expected host tensor for CPU sqrt"))
     }
 }
 
@@ -523,7 +523,7 @@ fn gpu_sqrt(tensor: &Tensor) -> Result<Tensor> {
             grad: None,
         })
     } else {
-        Err(RnnError::tensor("Expected device tensor for GPU sqrt"))
+        Err(NnlError::tensor("Expected device tensor for GPU sqrt"))
     }
 }
 
@@ -540,7 +540,7 @@ fn cpu_transpose(tensor: &Tensor) -> Result<Tensor> {
         let transposed_data = transpose_data_2d(&data, tensor.shape())?;
         Tensor::from_slice_on_device(&transposed_data, &new_shape, tensor.device().clone())
     } else {
-        Err(RnnError::tensor("Expected host tensor for CPU transpose"))
+        Err(NnlError::tensor("Expected host tensor for CPU transpose"))
     }
 }
 
@@ -585,14 +585,14 @@ fn gpu_transpose(tensor: &Tensor) -> Result<Tensor> {
             grad: None,
         })
     } else {
-        Err(RnnError::tensor("Expected device tensor for GPU transpose"))
+        Err(NnlError::tensor("Expected device tensor for GPU transpose"))
     }
 }
 
 /// Helper function for 2D matrix transpose
 fn transpose_data_2d(data: &[f32], shape: &[usize]) -> Result<Vec<f32>> {
     if shape.len() != 2 {
-        return Err(RnnError::tensor(
+        return Err(NnlError::tensor(
             "transpose_data_2d only supports 2D tensors",
         ));
     }
@@ -623,7 +623,7 @@ fn cpu_reduce_sum(tensor: &Tensor, dim: Option<usize>) -> Result<Tensor> {
         }
         Some(d) => {
             if d >= tensor.ndim() {
-                return Err(RnnError::invalid_input("Dimension out of bounds"));
+                return Err(NnlError::invalid_input("Dimension out of bounds"));
             }
 
             let shape = tensor.shape();
@@ -731,7 +731,7 @@ pub fn is_broadcastable(shape_a: &[usize], shape_b: &[usize]) -> bool {
 /// Broadcast a tensor to a target shape following NumPy broadcasting rules
 pub fn broadcast_to(tensor: &Tensor, target_shape: &[usize]) -> Result<Tensor> {
     if !is_broadcastable(tensor.shape(), target_shape) {
-        return Err(RnnError::shape_mismatch(tensor.shape(), target_shape));
+        return Err(NnlError::shape_mismatch(tensor.shape(), target_shape));
     }
 
     if tensor.shape() == target_shape {
@@ -805,7 +805,7 @@ pub fn conv2d(
     padding: (usize, usize),
 ) -> Result<Tensor> {
     if input.ndim() != 4 || weight.ndim() != 4 {
-        return Err(RnnError::invalid_input(
+        return Err(NnlError::invalid_input(
             "Conv2d requires 4D tensors (NCHW format)",
         ));
     }
@@ -860,7 +860,7 @@ fn cpu_conv2d(
     let kernel_width = weight_shape[3];
 
     if in_channels != weight_shape[1] {
-        return Err(RnnError::shape_mismatch(input_shape, weight_shape));
+        return Err(NnlError::shape_mismatch(input_shape, weight_shape));
     }
 
     let output_height = (input_height + 2 * padding.0 - kernel_height) / stride.0 + 1;
@@ -932,7 +932,7 @@ fn cpu_conv2d(
 fn get_tensor_memory(tensor: &Tensor) -> Result<&dyn crate::device::DeviceMemory> {
     match &tensor.data {
         crate::tensor::TensorData::Device(memory) => Ok(memory.as_ref()),
-        crate::tensor::TensorData::Host(_) => Err(RnnError::device(
+        crate::tensor::TensorData::Host(_) => Err(NnlError::device(
             "Cannot get device memory from host tensor",
         )),
     }

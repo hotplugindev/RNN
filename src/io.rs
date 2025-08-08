@@ -4,7 +4,7 @@
 //! models to and from disk in various formats, supporting both binary and
 //! text-based serialization with compression options.
 
-use crate::error::{Result, RnnError};
+use crate::error::{NnlError, Result};
 use crate::network::Network;
 use crate::tensor::SerializableTensor;
 use serde::{Deserialize, Serialize};
@@ -201,7 +201,7 @@ fn save_messagepack<P: AsRef<Path>>(model: &SerializableModel, path: P) -> Resul
     let file = File::create(path)?;
     let mut writer = BufWriter::new(file);
     rmp_serde::encode::write(&mut writer, model)
-        .map_err(|e| RnnError::io(std::io::Error::new(std::io::ErrorKind::Other, e)))?;
+        .map_err(|e| NnlError::io(std::io::Error::new(std::io::ErrorKind::Other, e)))?;
     Ok(())
 }
 
@@ -210,7 +210,7 @@ fn load_messagepack<P: AsRef<Path>>(path: P) -> Result<SerializableModel> {
     let file = File::open(path)?;
     let reader = BufReader::new(file);
     let model = rmp_serde::decode::from_read(reader)
-        .map_err(|e| RnnError::io(std::io::Error::new(std::io::ErrorKind::Other, e)))?;
+        .map_err(|e| NnlError::io(std::io::Error::new(std::io::ErrorKind::Other, e)))?;
     Ok(model)
 }
 
@@ -221,7 +221,7 @@ fn detect_format_from_extension<P: AsRef<Path>>(path: P) -> Result<ModelFormat> 
         .extension()
         .and_then(|ext| ext.to_str())
         .ok_or_else(|| {
-            RnnError::io(std::io::Error::new(
+            NnlError::io(std::io::Error::new(
                 std::io::ErrorKind::InvalidInput,
                 "No file extension found",
             ))
@@ -231,7 +231,7 @@ fn detect_format_from_extension<P: AsRef<Path>>(path: P) -> Result<ModelFormat> 
         "bin" | "model" => Ok(ModelFormat::Binary),
         "json" => Ok(ModelFormat::Json),
         "msgpack" | "mp" => Ok(ModelFormat::MessagePack),
-        _ => Err(RnnError::io(std::io::Error::new(
+        _ => Err(NnlError::io(std::io::Error::new(
             std::io::ErrorKind::InvalidInput,
             format!("Unsupported file extension: {}", extension),
         ))),
@@ -394,7 +394,7 @@ pub mod validation {
     /// Validate architecture consistency
     fn validate_architecture(architecture: &ModelArchitecture) -> Result<()> {
         if architecture.layers.is_empty() {
-            return Err(RnnError::network("Model must have at least one layer"));
+            return Err(NnlError::network("Model must have at least one layer"));
         }
 
         // TODO: Implement shape consistency validation
@@ -555,7 +555,7 @@ pub mod export {
         // For now, just save as JSON with ONNX-like structure
         let onnx_model = OnnxLikeModel {
             ir_version: 7,
-            producer_name: "rnn".to_string(),
+            producer_name: "nnl".to_string(),
             producer_version: env!("CARGO_PKG_VERSION").to_string(),
             model_version: 1,
             graph: GraphProto {

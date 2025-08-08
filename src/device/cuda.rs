@@ -4,7 +4,7 @@
 //! using the cudarc crate for CUDA runtime bindings.
 
 use crate::device::{Backend, DeviceInfo, DeviceMemory, DeviceType, Kernel};
-use crate::error::{Result, RnnError};
+use crate::error::{NnlError, Result};
 use cudarc::driver::{CudaDevice, CudaFunction, CudaSlice, DevicePtr, LaunchAsync, LaunchConfig};
 use cudarc::nvrtc::Ptx;
 use std::collections::HashMap;
@@ -37,7 +37,7 @@ impl CudaBackend {
     /// Create a new CUDA backend with specific device ID
     pub fn new_with_device(device_id: usize) -> Result<Self> {
         let device = CudaDevice::new(device_id).map_err(|e| {
-            RnnError::cuda(format!(
+            NnlError::cuda(format!(
                 "Failed to initialize CUDA device {}: {}",
                 device_id, e
             ))
@@ -57,27 +57,27 @@ impl CudaBackend {
     fn get_device_info(device: &CudaDevice) -> Result<CudaDeviceInfo> {
         let name = device
             .name()
-            .map_err(|e| RnnError::cuda(format!("Failed to get device name: {}", e)))?;
+            .map_err(|e| NnlError::cuda(format!("Failed to get device name: {}", e)))?;
 
         let (major, minor) = device
             .compute_capability()
-            .map_err(|e| RnnError::cuda(format!("Failed to get compute capability: {}", e)))?;
+            .map_err(|e| NnlError::cuda(format!("Failed to get compute capability: {}", e)))?;
 
         let total_memory = device
             .total_memory()
-            .map_err(|e| RnnError::cuda(format!("Failed to get total memory: {}", e)))?;
+            .map_err(|e| NnlError::cuda(format!("Failed to get total memory: {}", e)))?;
 
         let multiprocessor_count = device
             .multiprocessor_count()
-            .map_err(|e| RnnError::cuda(format!("Failed to get multiprocessor count: {}", e)))?;
+            .map_err(|e| NnlError::cuda(format!("Failed to get multiprocessor count: {}", e)))?;
 
         let max_threads_per_block = device
             .max_threads_per_block()
-            .map_err(|e| RnnError::cuda(format!("Failed to get max threads per block: {}", e)))?;
+            .map_err(|e| NnlError::cuda(format!("Failed to get max threads per block: {}", e)))?;
 
         let warp_size = device
             .warp_size()
-            .map_err(|e| RnnError::cuda(format!("Failed to get warp size: {}", e)))?;
+            .map_err(|e| NnlError::cuda(format!("Failed to get warp size: {}", e)))?;
 
         Ok(CudaDeviceInfo {
             name,
@@ -92,20 +92,20 @@ impl CudaBackend {
     /// Load and compile a CUDA kernel
     pub fn load_kernel(&mut self, name: &str, source: &str, function_name: &str) -> Result<()> {
         let ptx = Ptx::compile(source).map_err(|e| {
-            RnnError::cuda(format!("Failed to compile CUDA kernel '{}': {}", name, e))
+            NnlError::cuda(format!("Failed to compile CUDA kernel '{}': {}", name, e))
         })?;
 
         self.device
             .load_ptx(ptx, "neural_network_module", &[function_name])
             .map_err(|e| {
-                RnnError::cuda(format!("Failed to load PTX for kernel '{}': {}", name, e))
+                NnlError::cuda(format!("Failed to load PTX for kernel '{}': {}", name, e))
             })?;
 
         let function = self
             .device
             .get_func("neural_network_module", function_name)
             .map_err(|e| {
-                RnnError::cuda(format!("Failed to get function '{}': {}", function_name, e))
+                NnlError::cuda(format!("Failed to get function '{}': {}", function_name, e))
             })?;
 
         self.kernels.insert(name.to_string(), function);
@@ -143,7 +143,7 @@ impl Backend for CudaBackend {
         let cuda_memory = memory
             .as_any_mut()
             .downcast_mut::<CudaMemory>()
-            .ok_or_else(|| RnnError::device("Invalid memory type for CUDA backend"))?;
+            .ok_or_else(|| NnlError::device("Invalid memory type for CUDA backend"))?;
 
         cuda_memory.copy_from_host(data)
     }
@@ -152,7 +152,7 @@ impl Backend for CudaBackend {
         let cuda_memory = memory
             .as_any()
             .downcast_ref::<CudaMemory>()
-            .ok_or_else(|| RnnError::device("Invalid memory type for CUDA backend"))?;
+            .ok_or_else(|| NnlError::device("Invalid memory type for CUDA backend"))?;
 
         cuda_memory.copy_to_host(data)
     }
@@ -166,7 +166,7 @@ impl Backend for CudaBackend {
         let cuda_kernel = kernel
             .as_any()
             .downcast_ref::<CudaKernel>()
-            .ok_or_else(|| RnnError::device("Invalid kernel type for CUDA backend"))?;
+            .ok_or_else(|| NnlError::device("Invalid kernel type for CUDA backend"))?;
 
         cuda_kernel.execute(inputs, outputs, &self.device)
     }
@@ -174,7 +174,7 @@ impl Backend for CudaBackend {
     fn synchronize(&self) -> Result<()> {
         self.device
             .synchronize()
-            .map_err(|e| RnnError::cuda(format!("Failed to synchronize CUDA device: {}", e)))
+            .map_err(|e| NnlError::cuda(format!("Failed to synchronize CUDA device: {}", e)))
     }
 
     fn is_available(&self) -> bool {
@@ -193,12 +193,12 @@ impl CudaMemory {
     /// Create new CUDA memory buffer
     pub fn new(device: Arc<CudaDevice>, size: usize) -> Result<Self> {
         if size == 0 {
-            return Err(RnnError::memory("Cannot allocate zero-sized CUDA memory"));
+            return Err(NnlError::memory("Cannot allocate zero-sized CUDA memory"));
         }
 
         let buffer = device
             .alloc_zeros::<f32>(size)
-            .map_err(|e| RnnError::cuda(format!("Failed to allocate CUDA memory: {}", e)))?;
+            .map_err(|e| NnlError::cuda(format!("Failed to allocate CUDA memory: {}", e)))?;
 
         Ok(Self {
             buffer,
@@ -210,23 +210,23 @@ impl CudaMemory {
     /// Copy data from host to device
     pub fn copy_from_host(&mut self, data: &[f32]) -> Result<()> {
         if data.len() != self.size {
-            return Err(RnnError::shape_mismatch(&[self.size], &[data.len()]));
+            return Err(NnlError::shape_mismatch(&[self.size], &[data.len()]));
         }
 
         self.device
             .htod_copy_into(data, &mut self.buffer)
-            .map_err(|e| RnnError::cuda(format!("Failed to copy data to CUDA device: {}", e)))
+            .map_err(|e| NnlError::cuda(format!("Failed to copy data to CUDA device: {}", e)))
     }
 
     /// Copy data from device to host
     pub fn copy_to_host(&self, data: &mut [f32]) -> Result<()> {
         if data.len() != self.size {
-            return Err(RnnError::shape_mismatch(&[self.size], &[data.len()]));
+            return Err(NnlError::shape_mismatch(&[self.size], &[data.len()]));
         }
 
         self.device
             .dtoh_sync_copy_into(&self.buffer, data)
-            .map_err(|e| RnnError::cuda(format!("Failed to copy data from CUDA device: {}", e)))
+            .map_err(|e| NnlError::cuda(format!("Failed to copy data from CUDA device: {}", e)))
     }
 
     /// Get device pointer
@@ -295,7 +295,7 @@ impl CudaKernel {
         device: &CudaDevice,
     ) -> Result<()> {
         if inputs.is_empty() || outputs.is_empty() {
-            return Err(RnnError::device(
+            return Err(NnlError::device(
                 "CUDA kernel requires at least one input and output",
             ));
         }
@@ -304,12 +304,12 @@ impl CudaKernel {
         let input_memory = inputs[0]
             .as_any()
             .downcast_ref::<CudaMemory>()
-            .ok_or_else(|| RnnError::device("Invalid input memory type for CUDA kernel"))?;
+            .ok_or_else(|| NnlError::device("Invalid input memory type for CUDA kernel"))?;
 
         let output_memory = outputs[0]
             .as_any()
             .downcast_ref::<CudaMemory>()
-            .ok_or_else(|| RnnError::device("Invalid output memory type for CUDA kernel"))?;
+            .ok_or_else(|| NnlError::device("Invalid output memory type for CUDA kernel"))?;
 
         let num_elements = input_memory.size() as u32;
         let grid_size = (
@@ -336,7 +336,7 @@ impl CudaKernel {
             )
         }
         .map_err(|e| {
-            RnnError::cuda(format!(
+            NnlError::cuda(format!(
                 "Failed to launch CUDA kernel '{}': {}",
                 self.name, e
             ))

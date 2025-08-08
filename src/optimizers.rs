@@ -4,7 +4,7 @@
 //! training neural networks, including gradient descent variants and adaptive
 //! methods with momentum, learning rate scheduling, and regularization.
 
-use crate::error::{Result, RnnError};
+use crate::error::{NnlError, Result};
 use crate::tensor::Tensor;
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
@@ -171,7 +171,7 @@ impl SGD {
                 nesterov: *nesterov,
                 velocity: Vec::new(),
             }),
-            _ => Err(RnnError::config("Invalid config for SGD optimizer")),
+            _ => Err(NnlError::config("Invalid config for SGD optimizer")),
         }
     }
 
@@ -197,7 +197,7 @@ impl SGD {
 impl Optimizer for SGD {
     fn step(&mut self, parameters: &mut [Tensor], gradients: &[Tensor]) -> Result<()> {
         if parameters.len() != gradients.len() {
-            return Err(RnnError::config("Parameters and gradients length mismatch"));
+            return Err(NnlError::config("Parameters and gradients length mismatch"));
         }
 
         self.ensure_velocity_initialized(parameters)?;
@@ -230,7 +230,7 @@ impl Optimizer for SGD {
                         *param = param.sub(&momentum_update)?;
                     }
                 } else {
-                    return Err(RnnError::config("Velocity not initialized for momentum"));
+                    return Err(NnlError::config("Velocity not initialized for momentum"));
                 }
             } else {
                 // Standard SGD: param = param - lr * grad
@@ -325,7 +325,7 @@ impl Adam {
                 v: Vec::new(),
                 v_max: Vec::new(),
             }),
-            _ => Err(RnnError::config("Invalid config for Adam optimizer")),
+            _ => Err(NnlError::config("Invalid config for Adam optimizer")),
         }
     }
 
@@ -361,7 +361,7 @@ impl Adam {
 impl Optimizer for Adam {
     fn step(&mut self, parameters: &mut [Tensor], gradients: &[Tensor]) -> Result<()> {
         if parameters.len() != gradients.len() {
-            return Err(RnnError::config("Parameters and gradients length mismatch"));
+            return Err(NnlError::config("Parameters and gradients length mismatch"));
         }
 
         self.ensure_moments_initialized(parameters)?;
@@ -526,7 +526,7 @@ impl AdaGrad {
                 weight_decay: *weight_decay,
                 sum_squared_gradients: Vec::new(),
             }),
-            _ => Err(RnnError::config("Invalid config for AdaGrad optimizer")),
+            _ => Err(NnlError::config("Invalid config for AdaGrad optimizer")),
         }
     }
 
@@ -546,7 +546,7 @@ impl AdaGrad {
 impl Optimizer for AdaGrad {
     fn step(&mut self, parameters: &mut [Tensor], gradients: &[Tensor]) -> Result<()> {
         if parameters.len() != gradients.len() {
-            return Err(RnnError::config("Parameters and gradients length mismatch"));
+            return Err(NnlError::config("Parameters and gradients length mismatch"));
         }
 
         self.ensure_sum_squared_initialized(parameters)?;
@@ -636,7 +636,7 @@ pub fn create_optimizer(config: OptimizerConfig) -> Result<Box<dyn Optimizer>> {
         OptimizerConfig::SGD { .. } => Ok(Box::new(SGD::new(&config)?)),
         OptimizerConfig::Adam { .. } => Ok(Box::new(Adam::new(&config)?)),
         OptimizerConfig::AdaGrad { .. } => Ok(Box::new(AdaGrad::new(&config)?)),
-        _ => Err(RnnError::unsupported("Optimizer not yet implemented")),
+        _ => Err(NnlError::unsupported("Optimizer not yet implemented")),
     }
 }
 

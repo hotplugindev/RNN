@@ -1,16 +1,16 @@
 [package]
-name = "rnn"
+name = "nnl"
 version = "0.1.0"
 edition = "2024"
 authors = ["Giona Berti <mail@gberti.com>"]
 description = "A high-performance neural network library for Rust with CPU and GPU support"
 license = "MIT OR Apache-2.0"
-repository = "https://github.com/hotplugindev/rnn"
+repository = "https://github.com/hotplugindev/nnl"
 keywords = ["neural-network", "machine-learning", "deep-learning", "gpu", "cpu"]
 categories = ["science", "algorithms"]
 
 [lib]
-name = "rnn"
+name = "nnl"
 path = "src/lib.rs"
 
 [[example]]

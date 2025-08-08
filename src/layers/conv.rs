@@ -5,7 +5,7 @@
 
 use crate::activations::Activation;
 use crate::device::Device;
-use crate::error::{Result, RnnError};
+use crate::error::{NnlError, Result};
 use crate::layers::{Layer, TrainingMode, WeightInit};
 use crate::tensor::Tensor;
 use std::fmt;
@@ -88,16 +88,16 @@ impl Conv2DLayer {
         device: Device,
     ) -> Result<Self> {
         if in_channels == 0 || out_channels == 0 {
-            return Err(RnnError::config("Channel counts must be positive"));
+            return Err(NnlError::config("Channel counts must be positive"));
         }
         if kernel_size.0 == 0 || kernel_size.1 == 0 {
-            return Err(RnnError::config("Kernel size must be positive"));
+            return Err(NnlError::config("Kernel size must be positive"));
         }
         if stride.0 == 0 || stride.1 == 0 {
-            return Err(RnnError::config("Stride must be positive"));
+            return Err(NnlError::config("Stride must be positive"));
         }
         if dilation.0 == 0 || dilation.1 == 0 {
-            return Err(RnnError::config("Dilation must be positive"));
+            return Err(NnlError::config("Dilation must be positive"));
         }
 
         // Initialize weights [out_channels, in_channels, kernel_height, kernel_width]
@@ -185,7 +185,7 @@ impl Conv2DLayer {
 
         let input_shape = input.shape();
         if input_shape.len() != 4 {
-            return Err(RnnError::tensor(
+            return Err(NnlError::tensor(
                 "Expected 4D input [batch, channels, height, width]",
             ));
         }
@@ -196,7 +196,7 @@ impl Conv2DLayer {
         let input_width = input_shape[3];
 
         if in_channels != self.in_channels {
-            return Err(RnnError::shape_mismatch(
+            return Err(NnlError::shape_mismatch(
                 &[self.in_channels],
                 &[in_channels],
             ));
@@ -270,7 +270,7 @@ impl Layer for Conv2DLayer {
         let input = self
             .cached_input
             .as_ref()
-            .ok_or_else(|| RnnError::training("No cached input for backward pass"))?;
+            .ok_or_else(|| NnlError::training("No cached input for backward pass"))?;
 
         // For now, just return gradients with same shape as input
         let grad_input = Tensor::zeros_on_device(input.shape(), input.device().clone())?;
@@ -326,7 +326,7 @@ impl Layer for Conv2DLayer {
 
     fn output_shape(&self, input_shape: &[usize]) -> Result<Vec<usize>> {
         if input_shape.len() != 4 {
-            return Err(RnnError::tensor(
+            return Err(NnlError::tensor(
                 "Expected 4D input [batch, channels, height, width]",
             ));
         }
@@ -337,7 +337,7 @@ impl Layer for Conv2DLayer {
         let input_width = input_shape[3];
 
         if in_channels != self.in_channels {
-            return Err(RnnError::shape_mismatch(
+            return Err(NnlError::shape_mismatch(
                 &[self.in_channels],
                 &[in_channels],
             ));
@@ -538,45 +538,51 @@ mod tests {
     #[test]
     fn test_conv2d_invalid_parameters() {
         // Zero channels
-        assert!(Conv2DLayer::new(
-            0,
-            64,
-            (3, 3),
-            (1, 1),
-            (1, 1),
-            (1, 1),
-            Activation::ReLU,
-            true,
-            WeightInit::Xavier
-        )
-        .is_err());
+        assert!(
+            Conv2DLayer::new(
+                0,
+                64,
+                (3, 3),
+                (1, 1),
+                (1, 1),
+                (1, 1),
+                Activation::ReLU,
+                true,
+                WeightInit::Xavier
+            )
+            .is_err()
+        );
 
         // Zero kernel size
-        assert!(Conv2DLayer::new(
-            3,
-            64,
-            (0, 3),
-            (1, 1),
-            (1, 1),
-            (1, 1),
-            Activation::ReLU,
-            true,
-            WeightInit::Xavier
-        )
-        .is_err());
+        assert!(
+            Conv2DLayer::new(
+                3,
+                64,
+                (0, 3),
+                (1, 1),
+                (1, 1),
+                (1, 1),
+                Activation::ReLU,
+                true,
+                WeightInit::Xavier
+            )
+            .is_err()
+        );
 
         // Zero stride
-        assert!(Conv2DLayer::new(
-            3,
-            64,
-            (3, 3),
-            (0, 1),
-            (1, 1),
-            (1, 1),
-            Activation::ReLU,
-            true,
-            WeightInit::Xavier
-        )
-        .is_err());
+        assert!(
+            Conv2DLayer::new(
+                3,
+                64,
+                (3, 3),
+                (0, 1),
+                (1, 1),
+                (1, 1),
+                Activation::ReLU,
+                true,
+                WeightInit::Xavier
+            )
+            .is_err()
+        );
     }
 }

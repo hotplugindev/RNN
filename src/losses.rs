@@ -4,7 +4,7 @@
 //! in neural network training, including their forward and backward passes
 //! for gradient computation.
 
-use crate::error::{Result, RnnError};
+use crate::error::{NnlError, Result};
 use crate::tensor::Tensor;
 use serde::{Deserialize, Serialize};
 use std::fmt;
@@ -45,7 +45,7 @@ impl LossFunction {
     /// Compute the loss value
     pub fn forward(&self, predictions: &Tensor, targets: &Tensor) -> Result<f32> {
         if predictions.shape() != targets.shape() {
-            return Err(RnnError::shape_mismatch(
+            return Err(NnlError::shape_mismatch(
                 predictions.shape(),
                 targets.shape(),
             ));
@@ -80,7 +80,7 @@ impl LossFunction {
     /// Compute the gradient of the loss with respect to predictions
     pub fn backward(&self, predictions: &Tensor, targets: &Tensor) -> Result<Tensor> {
         if predictions.shape() != targets.shape() {
-            return Err(RnnError::shape_mismatch(
+            return Err(NnlError::shape_mismatch(
                 predictions.shape(),
                 targets.shape(),
             ));
@@ -506,7 +506,7 @@ impl LossFunction {
     /// Cosine Embedding Loss forward pass
     fn cosine_embedding_forward(&self, predictions: &[f32], targets: &[f32]) -> Result<f32> {
         if predictions.len() != targets.len() {
-            return Err(RnnError::shape_mismatch(
+            return Err(NnlError::shape_mismatch(
                 &[predictions.len()],
                 &[targets.len()],
             ));
@@ -563,7 +563,7 @@ impl LossFunction {
     /// Triplet Loss forward pass (simplified - assumes anchor, positive, negative in sequence)
     fn triplet_forward(&self, predictions: &[f32], _targets: &[f32], margin: f32) -> Result<f32> {
         if predictions.len() % 3 != 0 {
-            return Err(RnnError::tensor(
+            return Err(NnlError::tensor(
                 "Triplet loss requires inputs in groups of 3",
             ));
         }
@@ -593,7 +593,7 @@ impl LossFunction {
         margin: f32,
     ) -> Result<Vec<f32>> {
         if predictions.len() % 3 != 0 {
-            return Err(RnnError::tensor(
+            return Err(NnlError::tensor(
                 "Triplet loss requires inputs in groups of 3",
             ));
         }
@@ -915,7 +915,7 @@ mod tests {
         assert!(result.is_err());
         assert!(matches!(
             result.unwrap_err(),
-            RnnError::ShapeMismatch { .. }
+            NnlError::ShapeMismatch { .. }
         ));
     }
 

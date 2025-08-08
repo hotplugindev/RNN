@@ -4,7 +4,7 @@
 //! using CPU computation. The network consists of a single hidden layer and uses
 //! backpropagation for training.
 
-use rnn::prelude::*;
+use nnl::prelude::*;
 use std::time::Instant;
 
 fn main() -> Result<()> {
@@ -172,7 +172,7 @@ fn main() -> Result<()> {
 
     // Save the trained model
     let model_path = "simple_xor_cpu_model.bin";
-    rnn::io::save_model(&network, model_path, ModelFormat::Binary, None)?;
+    nnl::io::save_model(&network, model_path, ModelFormat::Binary, None)?;
     println!("\nModel saved to: {}", model_path);
 
     println!("\nSimple XOR CPU training example completed successfully!");

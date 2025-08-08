@@ -5,7 +5,7 @@
 //! and optimized operations.
 
 use crate::device::{Device, DeviceMemory, DeviceType};
-use crate::error::{Result, RnnError};
+use crate::error::{NnlError, Result};
 use ndarray::{Array, ArrayD, Dimension, IxDyn};
 use serde::{Deserialize, Serialize};
 use std::fmt;
@@ -100,7 +100,7 @@ impl Tensor {
     pub fn from_slice_on_device(data: &[f32], shape: &[usize], device: Device) -> Result<Self> {
         let expected_elements = shape.iter().product::<usize>();
         if data.len() != expected_elements {
-            return Err(RnnError::shape_mismatch(
+            return Err(NnlError::shape_mismatch(
                 &[expected_elements],
                 &[data.len()],
             ));
@@ -109,7 +109,7 @@ impl Tensor {
         match device.device_type() {
             DeviceType::Cpu => {
                 let array = ArrayD::from_shape_vec(IxDyn(shape), data.to_vec())
-                    .map_err(|e| RnnError::tensor(format!("Failed to create array: {}", e)))?;
+                    .map_err(|e| NnlError::tensor(format!("Failed to create array: {}", e)))?;
                 Ok(Self {
                     data: TensorData::Host(array),
                     shape: shape.to_vec(),
@@ -145,7 +145,7 @@ impl Tensor {
     /// Create a tensor from a 2D array literal
     pub fn from_array_2d(data: &[&[f32]]) -> Result<Self> {
         if data.is_empty() {
-            return Err(RnnError::tensor("Cannot create tensor from empty array"));
+            return Err(NnlError::tensor("Cannot create tensor from empty array"));
         }
 
         let rows = data.len();
@@ -154,7 +154,7 @@ impl Tensor {
         // Verify all rows have the same length
         for (i, row) in data.iter().enumerate() {
             if row.len() != cols {
-                return Err(RnnError::tensor(format!(
+                return Err(NnlError::tensor(format!(
                     "Inconsistent row length at row {}: expected {}, got {}",
                     i,
                     cols,
@@ -251,7 +251,7 @@ impl Tensor {
     /// Copy data from a slice
     pub fn copy_from_slice(&mut self, data: &[f32]) -> Result<()> {
         if data.len() != self.size() {
-            return Err(RnnError::shape_mismatch(&[self.size()], &[data.len()]));
+            return Err(NnlError::shape_mismatch(&[self.size()], &[data.len()]));
         }
 
         match &mut self.data {
@@ -270,7 +270,7 @@ impl Tensor {
     /// Copy data to a slice
     pub fn copy_to_slice(&self, data: &mut [f32]) -> Result<()> {
         if data.len() != self.size() {
-            return Err(RnnError::shape_mismatch(&[self.size()], &[data.len()]));
+            return Err(NnlError::shape_mismatch(&[self.size()], &[data.len()]));
         }
 
         match &self.data {
@@ -318,7 +318,7 @@ impl Tensor {
     pub fn reshape(&self, new_shape: &[usize]) -> Result<Tensor> {
         let new_size = new_shape.iter().product::<usize>();
         if new_size != self.size() {
-            return Err(RnnError::shape_mismatch(&[self.size()], &[new_size]));
+            return Err(NnlError::shape_mismatch(&[self.size()], &[new_size]));
         }
 
         // GPU-native reshape - just change shape metadata, no data copying needed
@@ -411,7 +411,7 @@ impl Tensor {
     /// Internal binary operation
     fn binary_op(&self, other: &Tensor, op: ops::TensorOp) -> Result<Tensor> {
         if self.shape != other.shape {
-            return Err(RnnError::shape_mismatch(&self.shape, &other.shape));
+            return Err(NnlError::shape_mismatch(&self.shape, &other.shape));
         }
 
         ops::binary_op(self, other, op)
@@ -572,7 +572,7 @@ impl From<&Tensor> for SerializableTensor {
 }
 
 impl TryFrom<SerializableTensor> for Tensor {
-    type Error = RnnError;
+    type Error = NnlError;
 
     fn try_from(serializable: SerializableTensor) -> Result<Self> {
         let mut tensor = Self::from_slice(&serializable.data, &serializable.shape)?;

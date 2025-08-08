@@ -4,7 +4,7 @@
 //! without copying the underlying data, enabling efficient slicing,
 //! indexing, and sub-tensor operations.
 
-use crate::error::{Result, RnnError};
+use crate::error::{NnlError, Result};
 use crate::tensor::Tensor;
 use std::ops::{Index, Range};
 
@@ -42,7 +42,7 @@ impl<'a> TensorView<'a> {
         strides: Vec<usize>,
     ) -> Result<Self> {
         if shape.len() != strides.len() {
-            return Err(RnnError::tensor(
+            return Err(NnlError::tensor(
                 "Shape and strides must have the same length",
             ));
         }
@@ -61,7 +61,7 @@ impl<'a> TensorView<'a> {
         };
 
         if max_index >= tensor.size() {
-            return Err(RnnError::tensor("View exceeds tensor bounds"));
+            return Err(NnlError::tensor("View exceeds tensor bounds"));
         }
 
         let data = tensor.to_vec().unwrap_or_default();
@@ -118,11 +118,11 @@ impl<'a> TensorView<'a> {
     /// Create a slice of this view along a specific dimension
     pub fn slice(&self, dim: usize, range: Range<usize>) -> Result<TensorView<'a>> {
         if dim >= self.ndim() {
-            return Err(RnnError::tensor("Dimension index out of bounds"));
+            return Err(NnlError::tensor("Dimension index out of bounds"));
         }
 
         if range.end > self.shape[dim] {
-            return Err(RnnError::tensor("Slice range exceeds dimension size"));
+            return Err(NnlError::tensor("Slice range exceeds dimension size"));
         }
 
         let mut new_shape = self.shape.clone();
@@ -136,11 +136,11 @@ impl<'a> TensorView<'a> {
     /// Create a view of a specific index along a dimension (reduces dimensionality by 1)
     pub fn select(&self, dim: usize, index: usize) -> Result<TensorView<'a>> {
         if dim >= self.ndim() {
-            return Err(RnnError::tensor("Dimension index out of bounds"));
+            return Err(NnlError::tensor("Dimension index out of bounds"));
         }
 
         if index >= self.shape[dim] {
-            return Err(RnnError::tensor("Index exceeds dimension size"));
+            return Err(NnlError::tensor("Index exceeds dimension size"));
         }
 
         let mut new_shape = self.shape.clone();
@@ -157,7 +157,7 @@ impl<'a> TensorView<'a> {
     /// Transpose the view (swap last two dimensions)
     pub fn transpose(&self) -> Result<TensorView<'a>> {
         if self.ndim() < 2 {
-            return Err(RnnError::tensor(
+            return Err(NnlError::tensor(
                 "Cannot transpose view with less than 2 dimensions",
             ));
         }
@@ -176,11 +176,11 @@ impl<'a> TensorView<'a> {
     pub fn reshape(&self, new_shape: &[usize]) -> Result<TensorView<'a>> {
         let new_size = new_shape.iter().product::<usize>();
         if new_size != self.size() {
-            return Err(RnnError::shape_mismatch(&[self.size()], &[new_size]));
+            return Err(NnlError::shape_mismatch(&[self.size()], &[new_size]));
         }
 
         if !self.is_contiguous() {
-            return Err(RnnError::tensor("Cannot reshape non-contiguous view"));
+            return Err(NnlError::tensor("Cannot reshape non-contiguous view"));
         }
 
         let new_strides = compute_strides(new_shape);
@@ -215,7 +215,7 @@ impl<'a> TensorView<'a> {
     /// Create a view with an added dimension of size 1
     pub fn unsqueeze(&self, dim: usize) -> Result<TensorView<'a>> {
         if dim > self.ndim() {
-            return Err(RnnError::tensor("Dimension index out of bounds"));
+            return Err(NnlError::tensor("Dimension index out of bounds"));
         }
 
         let mut new_shape = self.shape.clone();
@@ -237,7 +237,7 @@ impl<'a> TensorView<'a> {
     /// Convert linear index to multi-dimensional indices
     pub fn unravel_index(&self, index: usize) -> Result<Vec<usize>> {
         if index >= self.size() {
-            return Err(RnnError::tensor("Index out of bounds"));
+            return Err(NnlError::tensor("Index out of bounds"));
         }
 
         let mut indices = vec![0; self.ndim()];
@@ -254,14 +254,14 @@ impl<'a> TensorView<'a> {
     /// Convert multi-dimensional indices to linear index in the view
     pub fn ravel_index(&self, indices: &[usize]) -> Result<usize> {
         if indices.len() != self.ndim() {
-            return Err(RnnError::tensor(
+            return Err(NnlError::tensor(
                 "Number of indices must match tensor dimensions",
             ));
         }
 
         for (i, (&idx, &dim_size)) in indices.iter().zip(self.shape.iter()).enumerate() {
             if idx >= dim_size {
-                return Err(RnnError::tensor(format!(
+                return Err(NnlError::tensor(format!(
                     "Index {} out of bounds for dimension {} (size {})",
                     idx, i, dim_size
                 )));
@@ -283,7 +283,7 @@ impl<'a> TensorView<'a> {
         let tensor_data = self.tensor.to_vec()?;
 
         if tensor_index >= tensor_data.len() {
-            return Err(RnnError::tensor("Computed index exceeds tensor size"));
+            return Err(NnlError::tensor("Computed index exceeds tensor size"));
         }
 
         Ok(tensor_data[tensor_index])
@@ -298,7 +298,7 @@ impl<'a> TensorView<'a> {
             let end = start + self.size();
 
             if end > tensor_data.len() {
-                return Err(RnnError::tensor("View exceeds tensor bounds"));
+                return Err(NnlError::tensor("View exceeds tensor bounds"));
             }
 
             Tensor::from_slice_on_device(
@@ -332,7 +332,7 @@ impl<'a> TensorView<'a> {
     /// Create a view that iterates along a specific axis
     pub fn axis_iter(&'a self, axis: usize) -> Result<AxisIterator<'a>> {
         if axis >= self.ndim() {
-            return Err(RnnError::tensor("Axis index out of bounds"));
+            return Err(NnlError::tensor("Axis index out of bounds"));
         }
 
         Ok(AxisIterator {

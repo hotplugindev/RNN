@@ -4,7 +4,7 @@
 //! used in neural networks, including their forward and backward passes for
 //! gradient computation.
 
-use crate::error::{Result, RnnError};
+use crate::error::{NnlError, Result};
 use serde::{Deserialize, Serialize};
 use std::fmt;
 
@@ -170,7 +170,7 @@ impl Activation {
     /// Apply activation function to a slice of values
     pub fn forward_slice(&self, input: &[f32], output: &mut [f32]) -> Result<()> {
         if input.len() != output.len() {
-            return Err(RnnError::shape_mismatch(&[input.len()], &[output.len()]));
+            return Err(NnlError::shape_mismatch(&[input.len()], &[output.len()]));
         }
 
         match self {
@@ -192,7 +192,7 @@ impl Activation {
         grad_input: &mut [f32],
     ) -> Result<()> {
         if input.len() != grad_output.len() || input.len() != grad_input.len() {
-            return Err(RnnError::shape_mismatch(
+            return Err(NnlError::shape_mismatch(
                 &[input.len()],
                 &[grad_output.len()],
             ));
@@ -378,25 +378,25 @@ impl Activation {
         match self {
             Activation::LeakyReLU(alpha) => {
                 if params.len() != 1 {
-                    return Err(RnnError::config("LeakyReLU requires exactly 1 parameter"));
+                    return Err(NnlError::config("LeakyReLU requires exactly 1 parameter"));
                 }
                 *alpha = params[0];
             }
             Activation::ELU(alpha) => {
                 if params.len() != 1 {
-                    return Err(RnnError::config("ELU requires exactly 1 parameter"));
+                    return Err(NnlError::config("ELU requires exactly 1 parameter"));
                 }
                 *alpha = params[0];
             }
             Activation::PReLU(alpha) => {
                 if params.len() != 1 {
-                    return Err(RnnError::config("PReLU requires exactly 1 parameter"));
+                    return Err(NnlError::config("PReLU requires exactly 1 parameter"));
                 }
                 *alpha = params[0];
             }
             _ => {
                 if !params.is_empty() {
-                    return Err(RnnError::config(
+                    return Err(NnlError::config(
                         "This activation function has no parameters",
                     ));
                 }

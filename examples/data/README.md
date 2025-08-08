@@ -1,6 +1,6 @@
 # Examples Data Directory
 
-This directory contains data files and utilities for the RNN library examples.
+This directory contains data files and utilities for the NNL library examples.
 
 ## Contents
 
@@ -27,7 +27,7 @@ For real-world datasets, please download them from their official sources:
 
 ## File Formats
 
-The RNN library supports various data formats:
+The NNL library supports various data formats:
 - Raw binary data (.bin)
 - JSON (.json)
 - MessagePack (.msgpack)

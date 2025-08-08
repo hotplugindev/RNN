@@ -5,7 +5,7 @@
 
 use crate::activations::Activation;
 use crate::device::Device;
-use crate::error::{Result, RnnError};
+use crate::error::{NnlError, Result};
 use crate::layers::{Layer, TrainingMode, WeightInit};
 use crate::tensor::Tensor;
 use std::fmt;
@@ -67,7 +67,7 @@ impl DenseLayer {
         device: Device,
     ) -> Result<Self> {
         if input_size == 0 || output_size == 0 {
-            return Err(RnnError::config("Input and output sizes must be positive"));
+            return Err(NnlError::config("Input and output sizes must be positive"));
         }
 
         // Initialize weights
@@ -147,12 +147,12 @@ impl DenseLayer {
     fn linear_forward(&self, input: &Tensor) -> Result<Tensor> {
         // Validate input shape
         if input.shape().len() < 2 {
-            return Err(RnnError::tensor("Input must be at least 2D"));
+            return Err(NnlError::tensor("Input must be at least 2D"));
         }
 
         let input_features = input.shape()[input.shape().len() - 1];
         if input_features != self.input_size {
-            return Err(RnnError::shape_mismatch(
+            return Err(NnlError::shape_mismatch(
                 &[self.input_size],
                 &[input_features],
             ));
@@ -196,7 +196,7 @@ impl DenseLayer {
     fn compute_gradients(&mut self, input: &Tensor, grad_output: &Tensor) -> Result<()> {
         // Validate shapes
         if input.shape().len() != grad_output.shape().len() {
-            return Err(RnnError::tensor(
+            return Err(NnlError::tensor(
                 "Input and grad_output must have same number of dimensions",
             ));
         }
@@ -233,7 +233,7 @@ impl Layer for DenseLayer {
         // Check for NaN inputs
         let input_data = input.to_vec()?;
         if input_data.iter().any(|x| x.is_nan() || !x.is_finite()) {
-            return Err(RnnError::tensor("Input contains NaN or infinite values"));
+            return Err(NnlError::tensor("Input contains NaN or infinite values"));
         }
 
         // Cache input for backward pass
@@ -247,7 +247,7 @@ impl Layer for DenseLayer {
         // Check for NaN in linear output
         let linear_data = linear_output.to_vec()?;
         if linear_data.iter().any(|x| x.is_nan() || !x.is_finite()) {
-            return Err(RnnError::tensor(
+            return Err(NnlError::tensor(
                 "Linear transformation produced NaN or infinite values",
             ));
         }
@@ -263,7 +263,7 @@ impl Layer for DenseLayer {
         // Check for NaN in final output
         let result_data = result.to_vec()?;
         if result_data.iter().any(|x| x.is_nan() || !x.is_finite()) {
-            return Err(RnnError::tensor(
+            return Err(NnlError::tensor(
                 "Activation function produced NaN or infinite values",
             ));
         }
@@ -275,12 +275,12 @@ impl Layer for DenseLayer {
         let input = self
             .cached_input
             .take()
-            .ok_or_else(|| RnnError::training("No cached input for backward pass"))?;
+            .ok_or_else(|| NnlError::training("No cached input for backward pass"))?;
 
         let pre_activation = self
             .cached_pre_activation
             .take()
-            .ok_or_else(|| RnnError::training("No cached pre-activation for backward pass"))?;
+            .ok_or_else(|| NnlError::training("No cached pre-activation for backward pass"))?;
 
         // Compute activation gradient
         let activation_grad = self.compute_activation_gradient(&pre_activation, grad_output)?;
@@ -351,12 +351,12 @@ impl Layer for DenseLayer {
 
     fn output_shape(&self, input_shape: &[usize]) -> Result<Vec<usize>> {
         if input_shape.is_empty() {
-            return Err(RnnError::tensor("Input shape cannot be empty"));
+            return Err(NnlError::tensor("Input shape cannot be empty"));
         }
 
         let input_features = input_shape[input_shape.len() - 1];
         if input_features != self.input_size {
-            return Err(RnnError::shape_mismatch(
+            return Err(NnlError::shape_mismatch(
                 &[self.input_size],
                 &[input_features],
             ));
@@ -528,7 +528,7 @@ trait TensorExt {
 impl TensorExt for Tensor {
     fn sum_axis(&self, axis: usize) -> Result<Tensor> {
         if axis >= self.ndim() {
-            return Err(RnnError::tensor("Axis out of bounds"));
+            return Err(NnlError::tensor("Axis out of bounds"));
         }
 
         let data = self.to_vec()?;
@@ -548,7 +548,7 @@ impl TensorExt for Tensor {
 
             Tensor::from_slice_on_device(&result, &[feature_size], self.device().clone())
         } else {
-            Err(RnnError::unsupported(
+            Err(NnlError::unsupported(
                 "Only axis=0 sum for 2D tensors is currently supported",
             ))
         }

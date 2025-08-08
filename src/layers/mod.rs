@@ -6,7 +6,7 @@
 
 use crate::activations::Activation;
 use crate::device::Device;
-use crate::error::{Result, RnnError};
+use crate::error::{NnlError, Result};
 use crate::tensor::Tensor;
 use serde::{Deserialize, Serialize};
 use std::fmt;
@@ -582,7 +582,7 @@ pub mod utils {
     /// Validate tensor shapes are compatible
     pub fn validate_shapes(expected: &[usize], actual: &[usize]) -> Result<()> {
         if expected != actual {
-            return Err(RnnError::shape_mismatch(expected, actual));
+            return Err(NnlError::shape_mismatch(expected, actual));
         }
         Ok(())
     }

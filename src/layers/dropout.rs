@@ -5,7 +5,7 @@
 //! all elements are kept and scaled appropriately.
 
 use crate::device::Device;
-use crate::error::{Result, RnnError};
+use crate::error::{NnlError, Result};
 use crate::layers::{Layer, TrainingMode};
 use crate::tensor::Tensor;
 use rand::prelude::*;
@@ -26,7 +26,7 @@ impl DropoutLayer {
     /// Create a new dropout layer
     pub fn new(dropout_rate: f32) -> Result<Self> {
         if !(0.0..=1.0).contains(&dropout_rate) {
-            return Err(RnnError::config("Dropout rate must be between 0.0 and 1.0"));
+            return Err(NnlError::config("Dropout rate must be between 0.0 and 1.0"));
         }
 
         Ok(Self {
@@ -44,7 +44,7 @@ impl DropoutLayer {
     /// Set dropout rate
     pub fn set_dropout_rate(&mut self, rate: f32) -> Result<()> {
         if !(0.0..=1.0).contains(&rate) {
-            return Err(RnnError::config("Dropout rate must be between 0.0 and 1.0"));
+            return Err(NnlError::config("Dropout rate must be between 0.0 and 1.0"));
         }
         self.dropout_rate = rate;
         Ok(())
@@ -179,7 +179,7 @@ impl SpatialDropoutLayer {
     /// Create a new spatial dropout layer
     pub fn new(dropout_rate: f32) -> Result<Self> {
         if !(0.0..=1.0).contains(&dropout_rate) {
-            return Err(RnnError::config("Dropout rate must be between 0.0 and 1.0"));
+            return Err(NnlError::config("Dropout rate must be between 0.0 and 1.0"));
         }
 
         Ok(Self {
@@ -192,7 +192,7 @@ impl SpatialDropoutLayer {
     /// Generate spatial dropout mask (drops entire channels)
     fn generate_spatial_mask(&self, shape: &[usize], device: Device) -> Result<Tensor> {
         if shape.len() < 3 {
-            return Err(RnnError::tensor(
+            return Err(NnlError::tensor(
                 "Spatial dropout requires at least 3D input (batch, channels, spatial...)",
             ));
         }

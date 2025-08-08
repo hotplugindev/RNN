@@ -1,16 +1,16 @@
-//! Error handling for the RNN library
+//! Error handling for the NNL library
 //!
 //! This module provides comprehensive error types and utilities for handling
 //! various failure modes in neural network operations.
 
 use thiserror::Error;
 
-/// Result type alias for RNN operations
-pub type Result<T> = std::result::Result<T, RnnError>;
+/// Result type alias for NNL operations
+pub type Result<T> = std::result::Result<T, NnlError>;
 
-/// Comprehensive error type for all RNN operations
+/// Comprehensive error type for all NNL operations
 #[derive(Error, Debug)]
-pub enum RnnError {
+pub enum NnlError {
     /// Tensor operation errors
     #[error("Tensor error: {message}")]
     TensorError {
@@ -105,7 +105,7 @@ pub enum RnnError {
     },
 }
 
-impl RnnError {
+impl NnlError {
     /// Create a new tensor error
     pub fn tensor<S: Into<String>>(message: S) -> Self {
         Self::TensorError {
@@ -195,28 +195,28 @@ impl RnnError {
 }
 
 /// Utility trait for converting common error types
-pub trait IntoRnnError<T> {
-    /// Convert the error into an RnnError
-    fn into_rnn_error(self) -> Result<T>;
-    /// Add context to the error before converting to RnnError
+pub trait IntoNnlError<T> {
+    /// Convert the error into an NnlError
+    fn into_nnl_error(self) -> Result<T>;
+    /// Add context to the error before converting to NnlError
     fn with_context<F>(self, f: F) -> Result<T>
     where
         F: FnOnce() -> String;
 }
 
-impl<T, E> IntoRnnError<T> for std::result::Result<T, E>
+impl<T, E> IntoNnlError<T> for std::result::Result<T, E>
 where
     E: std::error::Error + Send + Sync + 'static,
 {
-    fn into_rnn_error(self) -> Result<T> {
-        self.map_err(|e| RnnError::device(e.to_string()))
+    fn into_nnl_error(self) -> Result<T> {
+        self.map_err(|e| NnlError::device(e.to_string()))
     }
 
     fn with_context<F>(self, f: F) -> Result<T>
     where
         F: FnOnce() -> String,
     {
-        self.map_err(|e| RnnError::device(format!("{}: {}", f(), e)))
+        self.map_err(|e| NnlError::device(format!("{}: {}", f(), e)))
     }
 }
 
@@ -226,22 +226,22 @@ mod tests {
 
     #[test]
     fn test_error_creation() {
-        let err = RnnError::tensor("test message");
-        assert!(matches!(err, RnnError::TensorError { .. }));
+        let err = NnlError::tensor("test message");
+        assert!(matches!(err, NnlError::TensorError { .. }));
         assert_eq!(err.to_string(), "Tensor error: test message");
     }
 
     #[test]
     fn test_shape_mismatch() {
-        let err = RnnError::shape_mismatch(&[2, 3], &[4, 5]);
-        assert!(matches!(err, RnnError::ShapeMismatch { .. }));
+        let err = NnlError::shape_mismatch(&[2, 3], &[4, 5]);
+        assert!(matches!(err, NnlError::ShapeMismatch { .. }));
         assert!(err.to_string().contains("expected [2, 3], got [4, 5]"));
     }
 
     #[test]
     fn test_error_chaining() {
         let io_err = std::io::Error::new(std::io::ErrorKind::NotFound, "file not found");
-        let rnn_err: RnnError = io_err.into();
-        assert!(matches!(rnn_err, RnnError::IoError(_)));
+        let nnl_err: NnlError = io_err.into();
+        assert!(matches!(nnl_err, NnlError::IoError(_)));
     }
 }

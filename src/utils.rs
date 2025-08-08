@@ -1,9 +1,9 @@
-//! Utility functions for the RNN library
+//! Utility functions for the NNL library
 //!
 //! This module provides common utility functions used throughout the library
 //! including numerical utilities, data preprocessing, and helper functions.
 
-use crate::error::{Result, RnnError};
+use crate::error::{NnlError, Result};
 use crate::tensor::Tensor;
 use rand::prelude::*;
 
@@ -27,7 +27,7 @@ pub mod math {
         let sum: f32 = exp_values.iter().sum();
 
         if sum == 0.0 {
-            return Err(RnnError::math("Softmax sum is zero"));
+            return Err(NnlError::math("Softmax sum is zero"));
         }
 
         // Normalize
@@ -37,7 +37,7 @@ pub mod math {
     /// Calculate cross entropy loss
     pub fn cross_entropy_loss(predictions: &[f32], targets: &[f32]) -> Result<f32> {
         if predictions.len() != targets.len() {
-            return Err(RnnError::shape_mismatch(
+            return Err(NnlError::shape_mismatch(
                 &[predictions.len()],
                 &[targets.len()],
             ));
@@ -59,7 +59,7 @@ pub mod math {
     /// Calculate binary cross entropy loss
     pub fn binary_cross_entropy_loss(predictions: &[f32], targets: &[f32]) -> Result<f32> {
         if predictions.len() != targets.len() {
-            return Err(RnnError::shape_mismatch(
+            return Err(NnlError::shape_mismatch(
                 &[predictions.len()],
                 &[targets.len()],
             ));
@@ -79,7 +79,7 @@ pub mod math {
     /// Calculate accuracy for classification
     pub fn classification_accuracy(predictions: &[f32], targets: &[f32]) -> Result<f32> {
         if predictions.len() != targets.len() {
-            return Err(RnnError::shape_mismatch(
+            return Err(NnlError::shape_mismatch(
                 &[predictions.len()],
                 &[targets.len()],
             ));
@@ -104,7 +104,7 @@ pub mod math {
     /// Calculate top-k accuracy for multi-class classification
     pub fn top_k_accuracy(predictions: &[Vec<f32>], targets: &[usize], k: usize) -> Result<f32> {
         if predictions.len() != targets.len() {
-            return Err(RnnError::shape_mismatch(
+            return Err(NnlError::shape_mismatch(
                 &[predictions.len()],
                 &[targets.len()],
             ));
@@ -135,7 +135,7 @@ pub mod math {
     /// Calculate mean squared error
     pub fn mean_squared_error(predictions: &[f32], targets: &[f32]) -> Result<f32> {
         if predictions.len() != targets.len() {
-            return Err(RnnError::shape_mismatch(
+            return Err(NnlError::shape_mismatch(
                 &[predictions.len()],
                 &[targets.len()],
             ));
@@ -159,7 +159,7 @@ pub mod math {
     /// Calculate mean absolute error
     pub fn mean_absolute_error(predictions: &[f32], targets: &[f32]) -> Result<f32> {
         if predictions.len() != targets.len() {
-            return Err(RnnError::shape_mismatch(
+            return Err(NnlError::shape_mismatch(
                 &[predictions.len()],
                 &[targets.len()],
             ));
@@ -263,7 +263,7 @@ pub mod data {
     /// Shuffle data and labels together
     pub fn shuffle_data<T: Clone>(data: &mut Vec<T>, labels: &mut Vec<T>) -> Result<()> {
         if data.len() != labels.len() {
-            return Err(RnnError::shape_mismatch(&[data.len()], &[labels.len()]));
+            return Err(NnlError::shape_mismatch(&[data.len()], &[labels.len()]));
         }
 
         let mut rng = thread_rng();
@@ -286,11 +286,11 @@ pub mod data {
         train_ratio: f32,
     ) -> Result<(Vec<T>, Vec<T>, Vec<T>, Vec<T>)> {
         if data.len() != labels.len() {
-            return Err(RnnError::shape_mismatch(&[data.len()], &[labels.len()]));
+            return Err(NnlError::shape_mismatch(&[data.len()], &[labels.len()]));
         }
 
         if !(0.0..=1.0).contains(&train_ratio) {
-            return Err(RnnError::config("Train ratio must be between 0 and 1"));
+            return Err(NnlError::config("Train ratio must be between 0 and 1"));
         }
 
         let split_index = (data.len() as f32 * train_ratio) as usize;
@@ -322,7 +322,7 @@ pub mod tensor_utils {
     pub fn chw_to_hwc(tensor: &Tensor) -> Result<Tensor> {
         let shape = tensor.shape();
         if shape.len() != 3 {
-            return Err(RnnError::tensor("Expected 3D tensor (CHW format)"));
+            return Err(NnlError::tensor("Expected 3D tensor (CHW format)"));
         }
 
         let c = shape[0];
@@ -349,7 +349,7 @@ pub mod tensor_utils {
     pub fn hwc_to_chw(tensor: &Tensor) -> Result<Tensor> {
         let shape = tensor.shape();
         if shape.len() != 3 {
-            return Err(RnnError::tensor("Expected 3D tensor (HWC format)"));
+            return Err(NnlError::tensor("Expected 3D tensor (HWC format)"));
         }
 
         let h = shape[0];
@@ -380,7 +380,7 @@ pub mod tensor_utils {
     ) -> Result<Tensor> {
         let shape = tensor.shape();
         if shape.len() != 2 {
-            return Err(RnnError::tensor("Expected 2D tensor for padding"));
+            return Err(NnlError::tensor("Expected 2D tensor for padding"));
         }
 
         let h = shape[0];
@@ -496,7 +496,7 @@ pub mod io {
                 lines
                     .next()
                     .ok_or_else(|| {
-                        RnnError::io(std::io::Error::new(
+                        NnlError::io(std::io::Error::new(
                             std::io::ErrorKind::UnexpectedEof,
                             "Empty file",
                         ))
@@ -516,7 +516,7 @@ pub mod io {
                 .split(',')
                 .map(|s| {
                     s.trim().parse().map_err(|e| {
-                        RnnError::io(std::io::Error::new(
+                        NnlError::io(std::io::Error::new(
                             std::io::ErrorKind::InvalidData,
                             format!("Parse error: {}", e),
                         ))

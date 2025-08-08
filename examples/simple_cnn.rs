@@ -2,7 +2,7 @@
 //!
 //! This example creates a minimal CNN to isolate training issues.
 
-use rnn::prelude::*;
+use nnl::prelude::*;
 
 fn main() -> Result<()> {
     env_logger::init();

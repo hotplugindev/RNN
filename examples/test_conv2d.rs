@@ -2,7 +2,7 @@
 //!
 //! This example tests Conv2D layers in isolation to identify issues.
 
-use rnn::prelude::*;
+use nnl::prelude::*;
 
 fn main() -> Result<()> {
     env_logger::init();

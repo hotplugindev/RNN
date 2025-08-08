@@ -5,14 +5,14 @@
 //! and inference functionality across different device backends.
 
 use crate::device::Device;
-use crate::error::{Result, RnnError};
+use crate::error::{NnlError, Result};
 #[cfg(test)]
 use crate::layers::create_layer;
 use crate::layers::{Layer, TrainingMode};
 use crate::losses::LossFunction;
+use crate::optimizers::Optimizer;
 #[cfg(test)]
 use crate::optimizers::create_optimizer;
-use crate::optimizers::Optimizer;
 use crate::tensor::Tensor;
 use serde::{Deserialize, Serialize};
 
@@ -130,7 +130,7 @@ impl Network {
         device: Device,
     ) -> Result<Self> {
         if layers.is_empty() {
-            return Err(RnnError::network("Network must have at least one layer"));
+            return Err(NnlError::network("Network must have at least one layer"));
         }
 
         let total_parameters = layers.iter().map(|layer| layer.num_parameters()).sum();
@@ -206,7 +206,7 @@ impl Network {
         mut callback: Option<&mut dyn TrainingCallback>,
     ) -> Result<TrainingMetrics> {
         if inputs.len() != targets.len() {
-            return Err(RnnError::training("Inputs and targets length mismatch"));
+            return Err(NnlError::training("Inputs and targets length mismatch"));
         }
 
         self.set_training(true);
@@ -353,7 +353,7 @@ impl Network {
     /// Evaluate the network on test data
     pub fn evaluate(&mut self, inputs: &[Tensor], targets: &[Tensor]) -> Result<TrainingMetrics> {
         if inputs.len() != targets.len() {
-            return Err(RnnError::training("Inputs and targets length mismatch"));
+            return Err(NnlError::training("Inputs and targets length mismatch"));
         }
 
         self.set_training(false);
@@ -518,7 +518,7 @@ impl Network {
 
                     // Validate tensor compatibility
                     if param.shape() != new_param.shape() {
-                        return Err(crate::error::RnnError::tensor(&format!(
+                        return Err(crate::error::NnlError::tensor(&format!(
                             "Parameter shape mismatch: expected {:?}, got {:?}",
                             param.shape(),
                             new_param.shape()
@@ -526,7 +526,7 @@ impl Network {
                     }
 
                     if param.device().device_type() != new_param.device().device_type() {
-                        return Err(crate::error::RnnError::tensor(
+                        return Err(crate::error::NnlError::tensor(
                             "Parameter and update tensor must be on same device type",
                         ));
                     }

@@ -4,7 +4,7 @@
 //! using both dense and convolutional approaches. It includes a custom MNIST
 //! data loader for the IDX format files.
 
-use rnn::prelude::*;
+use nnl::prelude::*;
 use std::fs::File;
 use std::io::{BufReader, Read};
 use std::path::Path;
@@ -55,7 +55,7 @@ impl MnistDataset {
     /// Load images from IDX3 format
     fn load_images(path: &str) -> Result<(Vec<Vec<f32>>, (usize, usize))> {
         let file = File::open(path).map_err(|e| {
-            RnnError::io(std::io::Error::new(
+            NnlError::io(std::io::Error::new(
                 std::io::ErrorKind::NotFound,
                 format!("Failed to open {}: {}", path, e),
             ))
@@ -65,7 +65,7 @@ impl MnistDataset {
         // Read magic number
         let mut buffer = [0u8; 4];
         reader.read_exact(&mut buffer).map_err(|e| {
-            RnnError::io(std::io::Error::new(
+            NnlError::io(std::io::Error::new(
                 std::io::ErrorKind::InvalidData,
                 format!("Failed to read magic number: {}", e),
             ))
@@ -73,7 +73,7 @@ impl MnistDataset {
         let magic = u32::from_be_bytes(buffer);
 
         if magic != 0x00000803 {
-            return Err(RnnError::io(std::io::Error::new(
+            return Err(NnlError::io(std::io::Error::new(
                 std::io::ErrorKind::InvalidData,
                 format!(
                     "Invalid magic number for images: expected 2051, got {}",
@@ -84,7 +84,7 @@ impl MnistDataset {
 
         // Read number of images
         reader.read_exact(&mut buffer).map_err(|e| {
-            RnnError::io(std::io::Error::new(
+            NnlError::io(std::io::Error::new(
                 std::io::ErrorKind::InvalidData,
                 format!("Failed to read number of images: {}", e),
             ))
@@ -93,7 +93,7 @@ impl MnistDataset {
 
         // Read number of rows
         reader.read_exact(&mut buffer).map_err(|e| {
-            RnnError::io(std::io::Error::new(
+            NnlError::io(std::io::Error::new(
                 std::io::ErrorKind::InvalidData,
                 format!("Failed to read number of rows: {}", e),
             ))
@@ -102,7 +102,7 @@ impl MnistDataset {
 
         // Read number of columns
         reader.read_exact(&mut buffer).map_err(|e| {
-            RnnError::io(std::io::Error::new(
+            NnlError::io(std::io::Error::new(
                 std::io::ErrorKind::InvalidData,
                 format!("Failed to read number of columns: {}", e),
             ))
@@ -121,7 +121,7 @@ impl MnistDataset {
         for _ in 0..num_images {
             let mut image_data = vec![0u8; image_size];
             reader.read_exact(&mut image_data).map_err(|e| {
-                RnnError::io(std::io::Error::new(
+                NnlError::io(std::io::Error::new(
                     std::io::ErrorKind::InvalidData,
                     format!("Failed to read image data: {}", e),
                 ))
@@ -141,7 +141,7 @@ impl MnistDataset {
     /// Load labels from IDX1 format
     fn load_labels(path: &str) -> Result<Vec<u8>> {
         let file = File::open(path).map_err(|e| {
-            RnnError::io(std::io::Error::new(
+            NnlError::io(std::io::Error::new(
                 std::io::ErrorKind::NotFound,
                 format!("Failed to open {}: {}", path, e),
             ))
@@ -151,7 +151,7 @@ impl MnistDataset {
         // Read magic number
         let mut buffer = [0u8; 4];
         reader.read_exact(&mut buffer).map_err(|e| {
-            RnnError::io(std::io::Error::new(
+            NnlError::io(std::io::Error::new(
                 std::io::ErrorKind::InvalidData,
                 format!("Failed to read magic number: {}", e),
             ))
@@ -159,7 +159,7 @@ impl MnistDataset {
         let magic = u32::from_be_bytes(buffer);
 
         if magic != 0x00000801 {
-            return Err(RnnError::io(std::io::Error::new(
+            return Err(NnlError::io(std::io::Error::new(
                 std::io::ErrorKind::InvalidData,
                 format!(
                     "Invalid magic number for labels: expected 2049, got {}",
@@ -170,7 +170,7 @@ impl MnistDataset {
 
         // Read number of labels
         reader.read_exact(&mut buffer).map_err(|e| {
-            RnnError::io(std::io::Error::new(
+            NnlError::io(std::io::Error::new(
                 std::io::ErrorKind::InvalidData,
                 format!("Failed to read number of labels: {}", e),
             ))
@@ -182,7 +182,7 @@ impl MnistDataset {
         // Read label data
         let mut labels = vec![0u8; num_labels];
         reader.read_exact(&mut labels).map_err(|e| {
-            RnnError::io(std::io::Error::new(
+            NnlError::io(std::io::Error::new(
                 std::io::ErrorKind::InvalidData,
                 format!("Failed to read label data: {}", e),
             ))
@@ -301,7 +301,7 @@ fn train_dense_network(
     }
 
     // Build network using preset
-    let mut network = rnn::network::builder::presets::mnist_classifier()
+    let mut network = nnl::network::builder::presets::mnist_classifier()
         .device(device.clone())
         .build()?;
 
@@ -609,7 +609,7 @@ fn main() -> Result<()> {
         eprintln!("  - t10k-images-idx3-ubyte");
         eprintln!("  - t10k-labels-idx1-ubyte");
         eprintln!("From: http://yann.lecun.com/exdb/mnist/");
-        return Err(RnnError::io(std::io::Error::new(
+        return Err(NnlError::io(std::io::Error::new(
             std::io::ErrorKind::NotFound,
             "MNIST data files not found",
         )));
@@ -630,7 +630,7 @@ fn main() -> Result<()> {
     // Save trained models
     println!("\nSaving trained models...");
 
-    rnn::io::save_model(
+    nnl::io::save_model(
         &dense_network,
         "mnist_dense_model.bin",
         ModelFormat::Binary,
@@ -657,7 +657,7 @@ fn main() -> Result<()> {
         }),
     )?;
 
-    rnn::io::save_model(
+    nnl::io::save_model(
         &cnn_network,
         "mnist_cnn_model.bin",
         ModelFormat::Binary,
@@ -712,9 +712,11 @@ mod tests {
 
         // Check first image is valid
         assert_eq!(dataset.train_images[0].len(), 784);
-        assert!(dataset.train_images[0]
-            .iter()
-            .all(|&x| x >= 0.0 && x <= 1.0));
+        assert!(
+            dataset.train_images[0]
+                .iter()
+                .all(|&x| x >= 0.0 && x <= 1.0)
+        );
 
         // Check first label is valid
         assert!(dataset.train_labels[0] < 10);

@@ -1,4 +1,4 @@
-//! # RNN - Rust Neural Network Library
+//! # NNL - Rust Neural Network Library
 //!
 //! A high-performance neural network library for Rust with comprehensive GPU and CPU support.
 //!
@@ -14,7 +14,7 @@
 //! ## Quick Start
 //!
 //! ```rust
-//! use rnn::prelude::*;
+//! use nnl::prelude::*;
 //!
 //! // Create a simple network
 //! let mut network = NetworkBuilder::new()
@@ -61,16 +61,16 @@ pub mod error;
 pub mod utils;
 
 // Re-exports for convenience
-pub use error::{Result, RnnError};
+pub use error::{NnlError, Result};
 
 /// Prelude module for convenient imports
 pub mod prelude {
     pub use crate::activations::Activation;
     pub use crate::device::{Backend, Device, DeviceType};
-    pub use crate::error::{Result, RnnError};
+    pub use crate::error::{NnlError, Result};
     pub use crate::io::{
-        load_model, load_network, load_network_auto, save_model, DatasetInfo, ModelFormat,
-        ModelMetadata, TrainingInfo,
+        DatasetInfo, ModelFormat, ModelMetadata, TrainingInfo, load_model, load_network,
+        load_network_auto, save_model,
     };
     pub use crate::layers::{Layer, LayerConfig, WeightInit};
     pub use crate::losses::LossFunction;

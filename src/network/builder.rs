@@ -5,11 +5,11 @@
 //! configuration settings.
 
 use crate::device::Device;
-use crate::error::{Result, RnnError};
-use crate::layers::{create_layer, Layer, LayerConfig};
+use crate::error::{NnlError, Result};
+use crate::layers::{Layer, LayerConfig, create_layer};
 use crate::losses::LossFunction;
 use crate::network::Network;
-use crate::optimizers::{create_optimizer, OptimizerConfig};
+use crate::optimizers::{OptimizerConfig, create_optimizer};
 
 /// Builder for constructing neural networks
 #[derive(Debug)]
@@ -87,16 +87,16 @@ impl NetworkBuilder {
     pub fn build(self) -> Result<Network> {
         // Validate configuration
         if self.layers.is_empty() {
-            return Err(RnnError::network("Network must have at least one layer"));
+            return Err(NnlError::network("Network must have at least one layer"));
         }
 
         let loss_function = self
             .loss_function
-            .ok_or_else(|| RnnError::network("Loss function must be specified"))?;
+            .ok_or_else(|| NnlError::network("Loss function must be specified"))?;
 
         let optimizer_config = self
             .optimizer
-            .ok_or_else(|| RnnError::network("Optimizer must be specified"))?;
+            .ok_or_else(|| NnlError::network("Optimizer must be specified"))?;
 
         // Get or auto-select device
         let device = if let Some(device) = self.device {
@@ -130,7 +130,7 @@ impl NetworkBuilder {
         // This is a simplified validation - would need actual shape checking
         // For now, just ensure we have layers
         if layers.is_empty() {
-            return Err(RnnError::network("No layers created"));
+            return Err(NnlError::network("No layers created"));
         }
 
         Ok(())

@@ -203,7 +203,7 @@ pub trait Backend {
     ) -> Result<()> {
         // Default implementation delegates to execute_kernel for backwards compatibility
         if uniform.is_some() {
-            return Err(crate::error::RnnError::device(
+            return Err(crate::error::NnlError::device(
                 "Uniform buffers not supported by this backend",
             ));
         }

@@ -4,7 +4,7 @@
 //! For now, we use a simpler approach to get the GPU backend working.
 
 use crate::device::{Backend, DeviceInfo, DeviceMemory, DeviceType, Kernel};
-use crate::error::{Result, RnnError};
+use crate::error::{NnlError, Result};
 
 use std::sync::{Arc, Mutex};
 
@@ -45,7 +45,7 @@ impl VulkanBackend {
         match operation {
             "elementwise_add" => {
                 if input_buffers.len() != 2 || output_buffers.len() != 1 {
-                    return Err(RnnError::device("Invalid buffer count for elementwise_add"));
+                    return Err(NnlError::device("Invalid buffer count for elementwise_add"));
                 }
 
                 let a_data = input_buffers[0].read_data()?;
@@ -61,7 +61,7 @@ impl VulkanBackend {
             }
             "elementwise_sub" => {
                 if input_buffers.len() != 2 || output_buffers.len() != 1 {
-                    return Err(RnnError::device("Invalid buffer count for elementwise_sub"));
+                    return Err(NnlError::device("Invalid buffer count for elementwise_sub"));
                 }
 
                 let a_data = input_buffers[0].read_data()?;
@@ -77,7 +77,7 @@ impl VulkanBackend {
             }
             "elementwise_mul" => {
                 if input_buffers.len() != 2 || output_buffers.len() != 1 {
-                    return Err(RnnError::device("Invalid buffer count for elementwise_mul"));
+                    return Err(NnlError::device("Invalid buffer count for elementwise_mul"));
                 }
 
                 let a_data = input_buffers[0].read_data()?;
@@ -93,7 +93,7 @@ impl VulkanBackend {
             }
             "elementwise_div" => {
                 if input_buffers.len() != 2 || output_buffers.len() != 1 {
-                    return Err(RnnError::device("Invalid buffer count for elementwise_div"));
+                    return Err(NnlError::device("Invalid buffer count for elementwise_div"));
                 }
 
                 let a_data = input_buffers[0].read_data()?;
@@ -109,13 +109,13 @@ impl VulkanBackend {
             }
             "scalar_add" => {
                 if input_buffers.len() != 1 || output_buffers.len() != 1 {
-                    return Err(RnnError::device("Invalid buffer count for scalar_add"));
+                    return Err(NnlError::device("Invalid buffer count for scalar_add"));
                 }
 
                 let scalar = if let Some(uniform) = uniform_data {
                     f32::from_bits(uniform[0])
                 } else {
-                    return Err(RnnError::device("Scalar operation requires uniform data"));
+                    return Err(NnlError::device("Scalar operation requires uniform data"));
                 };
 
                 let input_data = input_buffers[0].read_data()?;
@@ -124,13 +124,13 @@ impl VulkanBackend {
             }
             "scalar_mul" => {
                 if input_buffers.len() != 1 || output_buffers.len() != 1 {
-                    return Err(RnnError::device("Invalid buffer count for scalar_mul"));
+                    return Err(NnlError::device("Invalid buffer count for scalar_mul"));
                 }
 
                 let scalar = if let Some(uniform) = uniform_data {
                     f32::from_bits(uniform[0])
                 } else {
-                    return Err(RnnError::device("Scalar operation requires uniform data"));
+                    return Err(NnlError::device("Scalar operation requires uniform data"));
                 };
 
                 let input_data = input_buffers[0].read_data()?;
@@ -139,7 +139,7 @@ impl VulkanBackend {
             }
             "matrix_mul" => {
                 if input_buffers.len() != 2 || output_buffers.len() != 1 {
-                    return Err(RnnError::device("Invalid buffer count for matrix_mul"));
+                    return Err(NnlError::device("Invalid buffer count for matrix_mul"));
                 }
 
                 let [m, n, k] = if let Some(uniform) = uniform_data {
@@ -149,7 +149,7 @@ impl VulkanBackend {
                         uniform[2] as usize,
                     ]
                 } else {
-                    return Err(RnnError::device(
+                    return Err(NnlError::device(
                         "Matrix multiplication requires dimensions",
                     ));
                 };
@@ -173,7 +173,7 @@ impl VulkanBackend {
             }
             "relu" => {
                 if input_buffers.len() != 1 || output_buffers.len() != 1 {
-                    return Err(RnnError::device("Invalid buffer count for relu"));
+                    return Err(NnlError::device("Invalid buffer count for relu"));
                 }
 
                 let input_data = input_buffers[0].read_data()?;
@@ -182,7 +182,7 @@ impl VulkanBackend {
             }
             "sigmoid" => {
                 if input_buffers.len() != 1 || output_buffers.len() != 1 {
-                    return Err(RnnError::device("Invalid buffer count for sigmoid"));
+                    return Err(NnlError::device("Invalid buffer count for sigmoid"));
                 }
 
                 let input_data = input_buffers[0].read_data()?;
@@ -194,7 +194,7 @@ impl VulkanBackend {
             }
             "tanh" => {
                 if input_buffers.len() != 1 || output_buffers.len() != 1 {
-                    return Err(RnnError::device("Invalid buffer count for tanh"));
+                    return Err(NnlError::device("Invalid buffer count for tanh"));
                 }
 
                 let input_data = input_buffers[0].read_data()?;
@@ -203,7 +203,7 @@ impl VulkanBackend {
             }
             "softmax" => {
                 if input_buffers.len() != 1 || output_buffers.len() != 1 {
-                    return Err(RnnError::device("Invalid buffer count for softmax"));
+                    return Err(NnlError::device("Invalid buffer count for softmax"));
                 }
 
                 let input_data = input_buffers[0].read_data()?;
@@ -215,13 +215,13 @@ impl VulkanBackend {
             }
             "transpose" => {
                 if input_buffers.len() != 1 || output_buffers.len() != 1 {
-                    return Err(RnnError::device("Invalid buffer count for transpose"));
+                    return Err(NnlError::device("Invalid buffer count for transpose"));
                 }
 
                 let [rows, cols] = if let Some(uniform) = uniform_data {
                     [uniform[0] as usize, uniform[1] as usize]
                 } else {
-                    return Err(RnnError::device("Transpose requires dimensions"));
+                    return Err(NnlError::device("Transpose requires dimensions"));
                 };
 
                 let input_data = input_buffers[0].read_data()?;
@@ -237,7 +237,7 @@ impl VulkanBackend {
             }
             "copy" => {
                 if input_buffers.len() != 1 || output_buffers.len() != 1 {
-                    return Err(RnnError::device("Invalid buffer count for copy"));
+                    return Err(NnlError::device("Invalid buffer count for copy"));
                 }
 
                 let input_data = input_buffers[0].read_data()?;
@@ -245,7 +245,7 @@ impl VulkanBackend {
             }
             "sqrt" => {
                 if input_buffers.len() != 1 || output_buffers.len() != 1 {
-                    return Err(RnnError::device("Invalid buffer count for sqrt"));
+                    return Err(NnlError::device("Invalid buffer count for sqrt"));
                 }
 
                 let input_data = input_buffers[0].read_data()?;
@@ -253,7 +253,7 @@ impl VulkanBackend {
                 output_buffers[0].write_data(&result)?;
             }
             _ => {
-                return Err(RnnError::device(&format!(
+                return Err(NnlError::device(&format!(
                     "Unknown operation: {}",
                     operation
                 )));
@@ -283,7 +283,7 @@ impl Backend for VulkanBackend {
         let vulkan_buffer = memory
             .as_any()
             .downcast_ref::<VulkanBuffer>()
-            .ok_or_else(|| RnnError::device("Invalid memory type for Vulkan backend"))?;
+            .ok_or_else(|| NnlError::device("Invalid memory type for Vulkan backend"))?;
 
         vulkan_buffer.write_data(data)
     }
@@ -292,7 +292,7 @@ impl Backend for VulkanBackend {
         let vulkan_buffer = memory
             .as_any()
             .downcast_ref::<VulkanBuffer>()
-            .ok_or_else(|| RnnError::device("Invalid memory type for Vulkan backend"))?;
+            .ok_or_else(|| NnlError::device("Invalid memory type for Vulkan backend"))?;
 
         vulkan_buffer.write_u32_data(data)
     }
@@ -301,11 +301,11 @@ impl Backend for VulkanBackend {
         let vulkan_buffer = memory
             .as_any()
             .downcast_ref::<VulkanBuffer>()
-            .ok_or_else(|| RnnError::device("Invalid memory type for Vulkan backend"))?;
+            .ok_or_else(|| NnlError::device("Invalid memory type for Vulkan backend"))?;
 
         let buffer_data = vulkan_buffer.read_data()?;
         if data.len() != buffer_data.len() {
-            return Err(RnnError::device("Data size mismatch"));
+            return Err(NnlError::device("Data size mismatch"));
         }
         data.copy_from_slice(&buffer_data);
         Ok(())
@@ -330,7 +330,7 @@ impl Backend for VulkanBackend {
         let vulkan_kernel = kernel
             .as_any()
             .downcast_ref::<VulkanKernel>()
-            .ok_or_else(|| RnnError::device("Invalid kernel type for Vulkan backend"))?;
+            .ok_or_else(|| NnlError::device("Invalid kernel type for Vulkan backend"))?;
 
         // Convert memory references to VulkanBuffer
         let input_buffers: Result<Vec<_>> = inputs
@@ -338,7 +338,7 @@ impl Backend for VulkanBackend {
             .map(|mem| {
                 mem.as_any()
                     .downcast_ref::<VulkanBuffer>()
-                    .ok_or_else(|| RnnError::device("Invalid input buffer type"))
+                    .ok_or_else(|| NnlError::device("Invalid input buffer type"))
                     .map(|buf| Arc::new(buf.clone()))
             })
             .collect();
@@ -349,7 +349,7 @@ impl Backend for VulkanBackend {
             .map(|mem| {
                 mem.as_any()
                     .downcast_ref::<VulkanBuffer>()
-                    .ok_or_else(|| RnnError::device("Invalid output buffer type"))
+                    .ok_or_else(|| NnlError::device("Invalid output buffer type"))
                     .map(|buf| Arc::new(buf.clone()))
             })
             .collect();
@@ -360,7 +360,7 @@ impl Backend for VulkanBackend {
             let uniform_buffer = uniform_mem
                 .as_any()
                 .downcast_ref::<VulkanBuffer>()
-                .ok_or_else(|| RnnError::device("Invalid uniform buffer type"))?;
+                .ok_or_else(|| NnlError::device("Invalid uniform buffer type"))?;
             Some(uniform_buffer.read_u32_data()?)
         } else {
             None
@@ -409,7 +409,7 @@ impl VulkanBuffer {
     pub fn write_data(&self, data: &[f32]) -> Result<()> {
         let mut buffer = self.data.lock().unwrap();
         if data.len() != buffer.len() {
-            return Err(RnnError::device("Data size mismatch"));
+            return Err(NnlError::device("Data size mismatch"));
         }
         buffer.copy_from_slice(data);
         Ok(())
@@ -419,7 +419,7 @@ impl VulkanBuffer {
     pub fn write_u32_data(&self, data: &[u32]) -> Result<()> {
         let mut buffer = self.data.lock().unwrap();
         if data.len() * std::mem::size_of::<u32>() != self.size_in_bytes {
-            return Err(RnnError::device("Data size mismatch for u32 data"));
+            return Err(NnlError::device("Data size mismatch for u32 data"));
         }
 
         // Convert u32 to f32 for storage (bit representation)

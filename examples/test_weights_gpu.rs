@@ -3,8 +3,8 @@
 //! This example tests weight initialization directly to identify why weights
 //! are not being properly initialized in the neural network.
 
-use rnn::layers::DenseLayer;
-use rnn::prelude::*;
+use nnl::layers::DenseLayer;
+use nnl::prelude::*;
 
 fn main() -> Result<()> {
     env_logger::init();

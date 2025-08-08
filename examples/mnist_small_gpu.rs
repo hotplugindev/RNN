@@ -3,7 +3,7 @@
 //! This example demonstrates training neural networks on a subset of the MNIST dataset
 //! using only 600 training images and 10 test images for faster debugging.
 
-use rnn::prelude::*;
+use nnl::prelude::*;
 use std::fs::File;
 use std::io::{BufReader, Read};
 use std::path::Path;
@@ -64,7 +64,7 @@ impl MnistDataset {
     /// Load images from IDX3 format file
     fn load_images(path: &str) -> Result<(Vec<Vec<f32>>, (usize, usize))> {
         let file = File::open(path).map_err(|e| {
-            RnnError::io(std::io::Error::new(
+            NnlError::io(std::io::Error::new(
                 std::io::ErrorKind::NotFound,
                 format!("Could not open image file {}: {}", path, e),
             ))
@@ -76,7 +76,7 @@ impl MnistDataset {
         reader.read_exact(&mut magic)?;
         let magic_number = u32::from_be_bytes(magic);
         if magic_number != 2051 {
-            return Err(RnnError::invalid_input(format!(
+            return Err(NnlError::invalid_input(format!(
                 "Invalid magic number for images: expected 2051, got {}",
                 magic_number
             )));
@@ -127,7 +127,7 @@ impl MnistDataset {
     /// Load labels from IDX1 format file
     fn load_labels(path: &str) -> Result<Vec<u8>> {
         let file = File::open(path).map_err(|e| {
-            RnnError::io(std::io::Error::new(
+            NnlError::io(std::io::Error::new(
                 std::io::ErrorKind::NotFound,
                 format!("Could not open label file {}: {}", path, e),
             ))
@@ -139,7 +139,7 @@ impl MnistDataset {
         reader.read_exact(&mut magic)?;
         let magic_number = u32::from_be_bytes(magic);
         if magic_number != 2049 {
-            return Err(RnnError::invalid_input(format!(
+            return Err(NnlError::invalid_input(format!(
                 "Invalid magic number for labels: expected 2049, got {}",
                 magic_number
             )));
@@ -159,7 +159,7 @@ impl MnistDataset {
         // Validate labels are in range [0, 9]
         for &label in &labels {
             if label > 9 {
-                return Err(RnnError::invalid_input(format!(
+                return Err(NnlError::invalid_input(format!(
                     "Invalid label: expected 0-9, got {}",
                     label
                 )));
@@ -283,7 +283,7 @@ fn train_dense_network(
     }
 
     // Build network using preset
-    let mut network = rnn::network::builder::presets::mnist_classifier()
+    let mut network = nnl::network::builder::presets::mnist_classifier()
         .device(device.clone())
         .build()?;
 
@@ -381,7 +381,7 @@ fn main() -> Result<()> {
         eprintln!("  - t10k-images-idx3-ubyte");
         eprintln!("  - t10k-labels-idx1-ubyte");
         eprintln!("From: http://yann.lecun.com/exdb/mnist/");
-        return Err(RnnError::io(std::io::Error::new(
+        return Err(NnlError::io(std::io::Error::new(
             std::io::ErrorKind::NotFound,
             "MNIST data files not found",
         )));

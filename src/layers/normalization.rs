@@ -4,7 +4,7 @@
 //! implementations for neural networks.
 
 use crate::device::Device;
-use crate::error::{Result, RnnError};
+use crate::error::{NnlError, Result};
 use crate::layers::{Layer, TrainingMode};
 use crate::tensor::Tensor;
 use std::fmt;
@@ -56,13 +56,13 @@ impl BatchNormLayer {
         device: Device,
     ) -> Result<Self> {
         if num_features == 0 {
-            return Err(RnnError::config("Number of features must be positive"));
+            return Err(NnlError::config("Number of features must be positive"));
         }
         if eps <= 0.0 {
-            return Err(RnnError::config("Epsilon must be positive"));
+            return Err(NnlError::config("Epsilon must be positive"));
         }
         if !(0.0..=1.0).contains(&momentum) {
-            return Err(RnnError::config("Momentum must be between 0 and 1"));
+            return Err(NnlError::config("Momentum must be between 0 and 1"));
         }
 
         // Initialize running statistics
@@ -101,13 +101,13 @@ impl BatchNormLayer {
     fn batch_norm_forward(&mut self, input: &Tensor) -> Result<Tensor> {
         let input_shape = input.shape();
         if input_shape.len() < 2 {
-            return Err(RnnError::tensor("Input must have at least 2 dimensions"));
+            return Err(NnlError::tensor("Input must have at least 2 dimensions"));
         }
 
         let batch_size = input_shape[0];
         let features = input_shape[1];
         if features != self.num_features {
-            return Err(RnnError::shape_mismatch(&[self.num_features], &[features]));
+            return Err(NnlError::shape_mismatch(&[self.num_features], &[features]));
         }
 
         if self.training {
@@ -248,7 +248,7 @@ impl Layer for BatchNormLayer {
         let _input = self
             .cached_input
             .as_ref()
-            .ok_or_else(|| RnnError::training("No cached input for backward pass"))?;
+            .ok_or_else(|| NnlError::training("No cached input for backward pass"))?;
 
         // Return gradient with same shape as input
         Ok(grad_output.clone_data()?)
@@ -313,10 +313,10 @@ impl Layer for BatchNormLayer {
 
     fn output_shape(&self, input_shape: &[usize]) -> Result<Vec<usize>> {
         if input_shape.len() < 2 {
-            return Err(RnnError::tensor("Input must have at least 2 dimensions"));
+            return Err(NnlError::tensor("Input must have at least 2 dimensions"));
         }
         if input_shape[1] != self.num_features {
-            return Err(RnnError::shape_mismatch(
+            return Err(NnlError::shape_mismatch(
                 &[self.num_features],
                 &[input_shape[1]],
             ));
@@ -418,10 +418,10 @@ impl LayerNormLayer {
         device: Device,
     ) -> Result<Self> {
         if normalized_shape.is_empty() {
-            return Err(RnnError::config("Normalized shape cannot be empty"));
+            return Err(NnlError::config("Normalized shape cannot be empty"));
         }
         if eps <= 0.0 {
-            return Err(RnnError::config("Epsilon must be positive"));
+            return Err(NnlError::config("Epsilon must be positive"));
         }
 
         // Initialize learnable parameters if affine
