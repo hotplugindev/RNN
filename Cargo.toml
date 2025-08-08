@@ -13,7 +13,6 @@ exclude = [
     "/.gitignore",
     "/target/*",
     "*.mp4",
-    "*.png",
     "*.jpg",
     "*.zip",
     "/data/*",
