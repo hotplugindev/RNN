@@ -14,36 +14,28 @@ name = "rnn"
 path = "src/lib.rs"
 
 [[example]]
-name = "xor_cpu"
-path = "examples/xor_cpu.rs"
+name = "mnist"
+path = "examples/mnist.rs"
+
+[[example]]
+name = "mnist_gpu"
+path = "examples/mnist_gpu.rs"
+
+[[example]]
+name = "xor"
+path = "examples/xor.rs"
 
 [[example]]
 name = "xor_gpu"
 path = "examples/xor_gpu.rs"
 
 [[example]]
-name = "mnist_cnn"
-path = "examples/mnist_cnn.rs"
+name = "simple_cnn"
+path = "examples/simple_cnn.rs"
 
 [[example]]
-name = "simple_xor_cpu"
-path = "examples/simple_xor_cpu.rs"
-
-[[example]]
-name = "simple_xor_gpu"
-path = "examples/simple_xor_gpu.rs"
-
-[[example]]
-name = "mnist_dense_and_cnn_cpu"
-path = "examples/mnist_dense_and_cnn_cpu.rs"
-
-[[example]]
-name = "mnist_dense_and_cnn_gpu"
-path = "examples/mnist_dense_and_cnn_gpu.rs"
-
-[[example]]
-name = "basic_usage"
-path = "examples/basic_usage.rs"
+name = "simple_cnn_gpu"
+path = "examples/simple_cnn_gpu.rs"
 
 [dependencies]
 # Core math and arrays
@@ -51,7 +43,7 @@ ndarray = { version = "0.15", features = ["serde", "blas"] }
 nalgebra = { version = "0.32", features = ["serde-serialize"] }
 num-traits = "0.2"
 num_cpus = "1.16"
-rand = "0.8"
+rand = { version = "0.8", features = ["std"] }
 rand_distr = "0.4"
 
 # Parallelization and performance
