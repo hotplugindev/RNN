@@ -253,6 +253,12 @@ impl Layer for DenseLayer {
     fn forward(&mut self, input: &Tensor, training: TrainingMode) -> Result<Tensor> {
         self.training = matches!(training, TrainingMode::Training);
 
+        // Check for NaN inputs
+        let input_data = input.to_vec()?;
+        if input_data.iter().any(|x| x.is_nan() || !x.is_finite()) {
+            return Err(RnnError::tensor("Input contains NaN or infinite values"));
+        }
+
         // Cache input for backward pass
         if self.training {
             self.cached_input = Some(input.clone_data()?);
@@ -261,13 +267,31 @@ impl Layer for DenseLayer {
         // Linear transformation
         let linear_output = self.linear_forward(input)?;
 
+        // Check for NaN in linear output
+        let linear_data = linear_output.to_vec()?;
+        if linear_data.iter().any(|x| x.is_nan() || !x.is_finite()) {
+            return Err(RnnError::tensor(
+                "Linear transformation produced NaN or infinite values",
+            ));
+        }
+
         // Cache pre-activation for backward pass
         if self.training {
             self.cached_pre_activation = Some(linear_output.clone_data()?);
         }
 
         // Apply activation function
-        linear_output.activation(self.activation)
+        let result = linear_output.activation(self.activation)?;
+
+        // Check for NaN in final output
+        let result_data = result.to_vec()?;
+        if result_data.iter().any(|x| x.is_nan() || !x.is_finite()) {
+            return Err(RnnError::tensor(
+                "Activation function produced NaN or infinite values",
+            ));
+        }
+
+        Ok(result)
     }
 
     fn backward(&mut self, grad_output: &Tensor) -> Result<Tensor> {

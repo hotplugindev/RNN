@@ -176,32 +176,44 @@ impl LossFunction {
 
     /// Cross Entropy Loss forward pass (assumes softmax predictions and one-hot targets)
     fn cross_entropy_forward(&self, predictions: &[f32], targets: &[f32]) -> Result<f32> {
+        let eps = 1e-3; // Larger epsilon for more conservative clamping
         let mut loss = 0.0;
 
         for (&pred, &target) in predictions.iter().zip(targets.iter()) {
             if target > 0.0 {
-                if pred <= 0.0 {
-                    return Err(RnnError::math(
-                        "Prediction must be positive for cross entropy",
-                    ));
-                }
-                loss -= target * pred.ln();
+                let pred_clamped = pred.max(eps).min(1.0 - eps);
+                loss -= target * pred_clamped.ln();
             }
         }
 
-        Ok(loss)
+        Ok(loss / predictions.len() as f32)
     }
 
     /// Cross Entropy Loss backward pass
     fn cross_entropy_backward(&self, predictions: &[f32], targets: &[f32]) -> Result<Vec<f32>> {
-        let gradients = predictions
+        let eps = 1e-3; // Larger epsilon for more conservative clamping
+        let n = predictions.len() as f32;
+        let max_gradient = 1.0; // Much smaller max gradient to prevent instability
+
+        let gradients: Vec<f32> = predictions
             .iter()
             .zip(targets.iter())
             .map(|(&pred, &target)| {
-                if pred <= 0.0 {
-                    0.0 // Avoid division by zero
+                // Check for NaN inputs first
+                if pred.is_nan() || target.is_nan() {
+                    return 0.0; // Return zero gradient for NaN inputs
+                }
+
+                // More conservative clamping
+                let pred_clamped = pred.max(eps).min(1.0 - eps);
+                let raw_gradient = -target / pred_clamped / n;
+
+                // Check for NaN gradient and apply conservative clamping
+                if raw_gradient.is_nan() || !raw_gradient.is_finite() {
+                    0.0 // Return zero gradient for NaN/infinite results
                 } else {
-                    -target / pred
+                    // Apply much tighter gradient clamping for stability
+                    raw_gradient.max(-max_gradient).min(max_gradient)
                 }
             })
             .collect();

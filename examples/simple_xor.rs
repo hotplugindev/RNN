@@ -96,14 +96,14 @@ fn main() -> Result<()> {
 
     // Training configuration - simple and direct
     let training_config = TrainingConfig {
-        epochs: 10,
-        batch_size: 1, // Process one sample at a time
+        epochs: 100,
+        batch_size: 5, // Process one sample at a time
         verbose: true,
         early_stopping_patience: 0, // No early stopping
         early_stopping_threshold: 0.0,
         lr_schedule: None,
         validation_split: 0.0, // No validation split
-        shuffle: false,        // Don't shuffle for debugging
+        shuffle: true,         // Don't shuffle for debugging
         random_seed: Some(42),
     };
 

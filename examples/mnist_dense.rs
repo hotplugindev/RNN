@@ -102,7 +102,7 @@ fn main() -> Result<()> {
         early_stopping_threshold: 1e-4,
         lr_schedule: None,
         validation_split: 0.0,
-        shuffle: false,
+        shuffle: true,
         random_seed: Some(42),
     };
 

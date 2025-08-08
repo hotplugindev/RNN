@@ -161,7 +161,17 @@ impl Optimizer for SGD {
         self.ensure_velocity_initialized(parameters)?;
 
         for (i, (param, grad)) in parameters.iter_mut().zip(gradients.iter()).enumerate() {
-            let mut update = grad.clone_data()?;
+            // Check for NaN gradients and replace with zeros instead of skipping
+            let grad_data = grad.to_vec()?;
+            let mut update = if grad_data.iter().any(|x| x.is_nan() || !x.is_finite()) {
+                log::warn!(
+                    "SGD: Replacing NaN/infinite gradient with zeros for parameter {}",
+                    i
+                );
+                Tensor::zeros_on_device(grad.shape(), grad.device().clone())?
+            } else {
+                grad.clone_data()?
+            };
 
             // Apply weight decay
             if let Some(decay) = self.weight_decay {
@@ -192,7 +202,24 @@ impl Optimizer for SGD {
             } else {
                 // Standard SGD: param = param - lr * grad
                 let sgd_update = update.mul_scalar(self.learning_rate)?;
-                *param = param.sub(&sgd_update)?;
+                let new_param = param.sub(&sgd_update)?;
+
+                // Check for NaN in updated parameters and clamp if needed
+                let new_param_data = new_param.to_vec()?;
+                if new_param_data.iter().any(|x| x.is_nan() || !x.is_finite()) {
+                    log::warn!("SGD: Clamping NaN/infinite values for parameter {}", i);
+                    let clamped_data: Vec<f32> = new_param_data
+                        .iter()
+                        .map(|&x| if x.is_finite() { x } else { 0.0 })
+                        .collect();
+                    *param = Tensor::from_slice_on_device(
+                        &clamped_data,
+                        param.shape(),
+                        param.device().clone(),
+                    )?;
+                } else {
+                    *param = new_param;
+                }
             }
         }
 
@@ -324,7 +351,19 @@ impl Optimizer for Adam {
         let bias_correction2 = 1.0 - self.beta2.powi(self.step_count as i32);
 
         for (i, (param, grad)) in parameters.iter_mut().zip(gradients.iter()).enumerate() {
-            let mut grad_with_decay = grad.clone_data()?;
+            // Check for NaN gradients and replace with zeros instead of skipping
+            let grad_data = grad.to_vec()?;
+            let clean_grad = if grad_data.iter().any(|x| x.is_nan() || !x.is_finite()) {
+                log::warn!(
+                    "Adam: Replacing NaN/infinite gradient with zeros for parameter {}",
+                    i
+                );
+                Tensor::zeros_on_device(grad.shape(), grad.device().clone())?
+            } else {
+                grad.clone_data()?
+            };
+
+            let mut grad_with_decay = clean_grad;
 
             // Apply weight decay
             if let Some(decay) = self.weight_decay {
@@ -384,7 +423,24 @@ impl Optimizer for Adam {
             let update = m_hat.div(&denominator)?.mul_scalar(self.learning_rate)?;
 
             // Update parameter
-            *param = param.sub(&update)?;
+            let new_param = param.sub(&update)?;
+
+            // Check for NaN in updated parameters and clamp if needed
+            let new_param_data = new_param.to_vec()?;
+            if new_param_data.iter().any(|x| x.is_nan() || !x.is_finite()) {
+                log::warn!("Adam: Clamping NaN/infinite values for parameter {}", i);
+                let clamped_data: Vec<f32> = new_param_data
+                    .iter()
+                    .map(|&x| if x.is_finite() { x } else { 0.0 })
+                    .collect();
+                *param = Tensor::from_slice_on_device(
+                    &clamped_data,
+                    param.shape(),
+                    param.device().clone(),
+                )?;
+            } else {
+                *param = new_param;
+            }
         }
 
         Ok(())

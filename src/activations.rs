@@ -215,23 +215,73 @@ impl Activation {
             return Ok(());
         }
 
+        // Check for NaN inputs first
+        if input.iter().any(|x| x.is_nan() || !x.is_finite()) {
+            // If any input is NaN, return uniform distribution
+            let uniform_prob = 1.0 / input.len() as f32;
+            for output_val in output.iter_mut() {
+                *output_val = uniform_prob;
+            }
+            return Ok(());
+        }
+
         // Find maximum for numerical stability
         let max_val = input.iter().fold(f32::NEG_INFINITY, |a, &b| a.max(b));
 
-        // Compute exponentials and sum
+        // Check for extreme values that could cause issues
+        if !max_val.is_finite() {
+            // Fallback to uniform distribution
+            let uniform_prob = 1.0 / input.len() as f32;
+            for output_val in output.iter_mut() {
+                *output_val = uniform_prob;
+            }
+            return Ok(());
+        }
+
+        // Compute exponentials and sum with additional stability checks
         let mut sum = 0.0;
         for (i, &x) in input.iter().enumerate() {
-            output[i] = (x - max_val).exp();
+            let shifted_val = x - max_val;
+            // Additional clamp to prevent extreme exp values
+            let clamped_val = shifted_val.max(-50.0).min(50.0);
+            let exp_val = clamped_val.exp();
+
+            // Check for overflow/underflow
+            if !exp_val.is_finite() || exp_val.is_nan() {
+                output[i] = f32::EPSILON;
+            } else {
+                output[i] = exp_val;
+            }
             sum += output[i];
         }
 
-        // Normalize
-        if sum == 0.0 {
-            return Err(RnnError::math("Softmax sum is zero"));
-        }
+        // Enhanced normalization with numerical stability
+        if sum <= f32::EPSILON || !sum.is_finite() || sum.is_nan() {
+            // If sum is effectively zero, infinite, or NaN, use uniform distribution
+            let uniform_prob = 1.0 / input.len() as f32;
+            for output_val in output.iter_mut() {
+                *output_val = uniform_prob;
+            }
+        } else {
+            // Normal case - normalize by sum
+            for output_val in output.iter_mut() {
+                *output_val /= sum;
+                // Clamp to valid probability range to prevent floating point errors
+                *output_val = output_val.max(f32::EPSILON).min(1.0 - f32::EPSILON);
 
-        for output_val in output.iter_mut() {
-            *output_val /= sum;
+                // Final NaN check
+                if output_val.is_nan() || !output_val.is_finite() {
+                    *output_val = f32::EPSILON;
+                }
+            }
+
+            // Renormalize if needed to ensure probabilities sum to 1
+            let final_sum: f32 = output.iter().sum();
+            if (final_sum - 1.0).abs() > f32::EPSILON && final_sum > f32::EPSILON {
+                for output_val in output.iter_mut() {
+                    *output_val /= final_sum;
+                }
+            }
         }
 
         Ok(())
@@ -244,11 +294,22 @@ impl Activation {
         grad_output: &[f32],
         grad_input: &mut [f32],
     ) -> Result<()> {
+        // Check for NaN inputs
+        if input.iter().any(|x| x.is_nan() || !x.is_finite())
+            || grad_output.iter().any(|x| x.is_nan() || !x.is_finite())
+        {
+            // Return zero gradients for NaN inputs
+            for grad in grad_input.iter_mut() {
+                *grad = 0.0;
+            }
+            return Ok(());
+        }
+
         // First compute softmax forward pass
         let mut softmax_output = vec![0.0; input.len()];
         self.softmax_forward(input, &mut softmax_output)?;
 
-        // Compute gradient using Jacobian
+        // Compute gradient using Jacobian with NaN protection
         for i in 0..input.len() {
             grad_input[i] = 0.0;
             for j in 0..input.len() {
@@ -257,7 +318,19 @@ impl Activation {
                 } else {
                     -softmax_output[i] * softmax_output[j]
                 };
-                grad_input[i] += jacobian * grad_output[j];
+
+                // Check for NaN in jacobian computation
+                if jacobian.is_finite() && grad_output[j].is_finite() {
+                    grad_input[i] += jacobian * grad_output[j];
+                }
+            }
+
+            // Final NaN check and clamp
+            if grad_input[i].is_nan() || !grad_input[i].is_finite() {
+                grad_input[i] = 0.0;
+            } else {
+                // Clamp gradients to prevent extreme values
+                grad_input[i] = grad_input[i].max(-10.0).min(10.0);
             }
         }
 
