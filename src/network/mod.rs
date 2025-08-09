@@ -14,6 +14,7 @@ use crate::optimizers::Optimizer;
 #[cfg(test)]
 use crate::optimizers::create_optimizer;
 use crate::tensor::Tensor;
+use rayon::prelude::*;
 use serde::{Deserialize, Serialize};
 
 use std::fmt;
@@ -238,18 +239,50 @@ impl Network {
             let mut batch_loss = 0.0;
             let mut batch_correct = 0;
 
-            // Process batch
-            for (input, target) in batch_inputs.iter().zip(batch_targets.iter()) {
-                let prediction = self.forward(input)?;
-                let loss = self.backward(target, &prediction)?;
+            // Process batch - improved for CPU parallelism utilization
+            // The key insight is that while we can't parallelize forward/backward calls directly,
+            // we can ensure that each forward/backward call maximally utilizes CPU cores
+            // by using larger effective batch sizes when possible
 
-                batch_loss += loss;
-                total_samples += 1;
+            if batch_inputs.len() > 1 {
+                // Try to concatenate samples into a larger batch for better CPU utilization
+                match self.process_batch_efficiently(batch_inputs, batch_targets) {
+                    Ok((loss, correct)) => {
+                        batch_loss = loss;
+                        batch_correct = correct;
+                        total_samples += batch_inputs.len();
+                    }
+                    Err(_) => {
+                        // Fallback to individual processing if batch processing fails
+                        for (input, target) in batch_inputs.iter().zip(batch_targets.iter()) {
+                            let prediction = self.forward(input)?;
+                            let loss = self.backward(target, &prediction)?;
 
-                // Calculate accuracy for classification tasks
-                if self.is_classification_task() {
-                    if self.is_correct_prediction(&prediction, target)? {
-                        batch_correct += 1;
+                            batch_loss += loss;
+                            total_samples += 1;
+
+                            if self.is_classification_task() {
+                                if self.is_correct_prediction(&prediction, target)? {
+                                    batch_correct += 1;
+                                }
+                            }
+                        }
+                        batch_loss /= batch_inputs.len() as f32;
+                    }
+                }
+            } else {
+                // Single sample processing
+                for (input, target) in batch_inputs.iter().zip(batch_targets.iter()) {
+                    let prediction = self.forward(input)?;
+                    let loss = self.backward(target, &prediction)?;
+
+                    batch_loss += loss;
+                    total_samples += 1;
+
+                    if self.is_classification_task() {
+                        if self.is_correct_prediction(&prediction, target)? {
+                            batch_correct += 1;
+                        }
                     }
                 }
             }
@@ -716,6 +749,110 @@ impl Network {
         }
 
         Ok(())
+    }
+
+    /// Process a batch efficiently by concatenating samples when possible
+    fn process_batch_efficiently(
+        &mut self,
+        inputs: &[Tensor],
+        targets: &[Tensor],
+    ) -> Result<(f32, usize)> {
+        // Concatenate individual samples into batch tensors
+        let batch_input = self.concatenate_tensors(inputs)?;
+        let batch_target = self.concatenate_tensors(targets)?;
+
+        // Process the entire batch at once
+        let prediction = self.forward(&batch_input)?;
+        let loss = self.backward(&batch_target, &prediction)?;
+
+        // Calculate accuracy for the batch
+        let correct_count = if self.is_classification_task() {
+            self.count_batch_correct_predictions(&prediction, &batch_target)?
+        } else {
+            0
+        };
+
+        Ok((loss, correct_count))
+    }
+
+    /// Concatenate individual sample tensors into a batch tensor
+    fn concatenate_tensors(&self, tensors: &[Tensor]) -> Result<Tensor> {
+        if tensors.is_empty() {
+            return Err(NnlError::training("Cannot concatenate empty tensor list"));
+        }
+
+        if tensors.len() == 1 {
+            return Ok(tensors[0].clone_data()?);
+        }
+
+        // Get sample shape and validate
+        let sample_shape = tensors[0].shape();
+        if sample_shape[0] != 1 {
+            return Err(NnlError::training(
+                "Expected individual samples with batch dimension 1",
+            ));
+        }
+
+        // Create batch shape
+        let mut batch_shape = sample_shape.to_vec();
+        batch_shape[0] = tensors.len();
+
+        // Collect all data using parallel processing
+        let all_data: Result<Vec<f32>> = tensors
+            .par_iter()
+            .map(|tensor| tensor.to_vec())
+            .collect::<Result<Vec<Vec<f32>>>>()
+            .map(|vecs| vecs.into_iter().flatten().collect());
+
+        let batch_data = all_data?;
+        Tensor::from_slice(&batch_data, &batch_shape)
+    }
+
+    /// Count correct predictions for a batch tensor
+    fn count_batch_correct_predictions(
+        &self,
+        predictions: &Tensor,
+        targets: &Tensor,
+    ) -> Result<usize> {
+        let pred_shape = predictions.shape();
+        let batch_size = pred_shape[0];
+        let num_classes = pred_shape[1];
+
+        let pred_data = predictions.to_vec()?;
+        let target_data = targets.to_vec()?;
+
+        // Use parallel processing to count correct predictions
+        let correct_count = (0..batch_size)
+            .into_par_iter()
+            .map(|i| {
+                let pred_start = i * num_classes;
+                let pred_end = pred_start + num_classes;
+                let pred_slice = &pred_data[pred_start..pred_end];
+                let target_slice = &target_data[pred_start..pred_end];
+
+                let predicted_class = pred_slice
+                    .iter()
+                    .enumerate()
+                    .max_by(|a, b| a.1.partial_cmp(b.1).unwrap_or(std::cmp::Ordering::Equal))
+                    .map(|(idx, _)| idx)
+                    .unwrap_or(0);
+
+                let actual_class = target_slice
+                    .iter()
+                    .enumerate()
+                    .max_by(|a, b| a.1.partial_cmp(b.1).unwrap_or(std::cmp::Ordering::Equal))
+                    .map(|(idx, _)| idx)
+                    .unwrap_or(0);
+
+                if predicted_class == actual_class {
+                    1
+                } else {
+                    0
+                }
+            })
+            .sum();
+
+        Ok(correct_count)
     }
 }
 
