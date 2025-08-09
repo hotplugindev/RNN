@@ -53,41 +53,60 @@ impl Layer for MaxPool2DLayer {
             self.cached_input = Some(input.clone_data()?);
         }
 
-        // Simplified max pooling - create output with correct shape
+        // Proper max pooling implementation
         let output_shape = self.compute_output_shape(input.shape())?;
         let output_size: usize = output_shape.iter().product();
+        let mut output_data = vec![f32::NEG_INFINITY; output_size];
 
-        // For now, just create zeros with the correct output shape
-        // Real implementation would perform actual max pooling operation
-        let mut output_data = vec![0.0; output_size];
-
-        // Simple downsampling - take every stride-th element
         let input_data = input.to_vec()?;
         let input_shape = input.shape();
         let (stride_h, stride_w) = self.effective_stride();
+        let (kernel_h, kernel_w) = self.kernel_size;
+        let (pad_h, pad_w) = self.padding;
 
         for batch in 0..input_shape[0] {
             for channel in 0..input_shape[1] {
                 for out_h in 0..output_shape[2] {
                     for out_w in 0..output_shape[3] {
-                        let in_h = out_h * stride_h;
-                        let in_w = out_w * stride_w;
+                        let mut max_val = f32::NEG_INFINITY;
 
-                        if in_h < input_shape[2] && in_w < input_shape[3] {
-                            let input_idx =
-                                batch * input_shape[1] * input_shape[2] * input_shape[3]
-                                    + channel * input_shape[2] * input_shape[3]
-                                    + in_h * input_shape[3]
-                                    + in_w;
-                            let output_idx =
-                                batch * output_shape[1] * output_shape[2] * output_shape[3]
-                                    + channel * output_shape[2] * output_shape[3]
-                                    + out_h * output_shape[3]
-                                    + out_w;
+                        // Iterate over the pooling window
+                        for kh in 0..kernel_h {
+                            for kw in 0..kernel_w {
+                                let in_h = (out_h * stride_h + kh) as i32 - pad_h as i32;
+                                let in_w = (out_w * stride_w + kw) as i32 - pad_w as i32;
 
-                            if input_idx < input_data.len() && output_idx < output_data.len() {
-                                output_data[output_idx] = input_data[input_idx];
+                                // Check bounds
+                                if in_h >= 0
+                                    && in_w >= 0
+                                    && (in_h as usize) < input_shape[2]
+                                    && (in_w as usize) < input_shape[3]
+                                {
+                                    let input_idx =
+                                        batch * input_shape[1] * input_shape[2] * input_shape[3]
+                                            + channel * input_shape[2] * input_shape[3]
+                                            + (in_h as usize) * input_shape[3]
+                                            + (in_w as usize);
+
+                                    if input_idx < input_data.len() {
+                                        max_val = max_val.max(input_data[input_idx]);
+                                    }
+                                }
                             }
+                        }
+
+                        let output_idx =
+                            batch * output_shape[1] * output_shape[2] * output_shape[3]
+                                + channel * output_shape[2] * output_shape[3]
+                                + out_h * output_shape[3]
+                                + out_w;
+
+                        if output_idx < output_data.len() {
+                            output_data[output_idx] = if max_val == f32::NEG_INFINITY {
+                                0.0
+                            } else {
+                                max_val
+                            };
                         }
                     }
                 }
@@ -106,9 +125,81 @@ impl Layer for MaxPool2DLayer {
             .as_ref()
             .ok_or_else(|| NnlError::training("No cached input for backward pass"))?;
 
-        // Simplified backward pass - real implementation would compute proper gradients
-        // For now, just return gradient with same shape as input
-        let grad_input = grad_output.reshape(input.shape())?;
+        // Proper MaxPool2D backward pass
+        let input_data = input.to_vec()?;
+        let input_shape = input.shape();
+        let grad_output_data = grad_output.to_vec()?;
+        let output_shape = grad_output.shape();
+
+        let mut grad_input_data = vec![0.0; input_data.len()];
+        let (stride_h, stride_w) = self.effective_stride();
+        let (kernel_h, kernel_w) = self.kernel_size;
+        let (pad_h, pad_w) = self.padding;
+
+        for batch in 0..input_shape[0] {
+            for channel in 0..input_shape[1] {
+                for out_h in 0..output_shape[2] {
+                    for out_w in 0..output_shape[3] {
+                        let mut max_val = f32::NEG_INFINITY;
+                        let mut max_h = 0;
+                        let mut max_w = 0;
+
+                        // Find the position of the maximum value in the pooling window
+                        for kh in 0..kernel_h {
+                            for kw in 0..kernel_w {
+                                let in_h = (out_h * stride_h + kh) as i32 - pad_h as i32;
+                                let in_w = (out_w * stride_w + kw) as i32 - pad_w as i32;
+
+                                if in_h >= 0
+                                    && in_w >= 0
+                                    && (in_h as usize) < input_shape[2]
+                                    && (in_w as usize) < input_shape[3]
+                                {
+                                    let input_idx =
+                                        batch * input_shape[1] * input_shape[2] * input_shape[3]
+                                            + channel * input_shape[2] * input_shape[3]
+                                            + (in_h as usize) * input_shape[3]
+                                            + (in_w as usize);
+
+                                    if input_idx < input_data.len()
+                                        && input_data[input_idx] > max_val
+                                    {
+                                        max_val = input_data[input_idx];
+                                        max_h = in_h as usize;
+                                        max_w = in_w as usize;
+                                    }
+                                }
+                            }
+                        }
+
+                        // Propagate gradient only to the max position
+                        if max_val != f32::NEG_INFINITY {
+                            let grad_output_idx =
+                                batch * output_shape[1] * output_shape[2] * output_shape[3]
+                                    + channel * output_shape[2] * output_shape[3]
+                                    + out_h * output_shape[3]
+                                    + out_w;
+
+                            let grad_input_idx =
+                                batch * input_shape[1] * input_shape[2] * input_shape[3]
+                                    + channel * input_shape[2] * input_shape[3]
+                                    + max_h * input_shape[3]
+                                    + max_w;
+
+                            if grad_output_idx < grad_output_data.len()
+                                && grad_input_idx < grad_input_data.len()
+                            {
+                                grad_input_data[grad_input_idx] +=
+                                    grad_output_data[grad_output_idx];
+                            }
+                        }
+                    }
+                }
+            }
+        }
+
+        let grad_input =
+            Tensor::from_slice_on_device(&grad_input_data, input_shape, input.device().clone())?;
         Ok(grad_input)
     }
 
@@ -238,41 +329,59 @@ impl Layer for AvgPool2DLayer {
             self.cached_input = Some(input.clone_data()?);
         }
 
-        // Simplified average pooling - create output with correct shape
+        // Proper average pooling implementation
         let output_shape = self.compute_output_shape(input.shape())?;
         let output_size: usize = output_shape.iter().product();
-
-        // For now, just create zeros with the correct output shape
-        // Real implementation would perform actual average pooling operation
         let mut output_data = vec![0.0; output_size];
 
-        // Simple downsampling - take every stride-th element
         let input_data = input.to_vec()?;
         let input_shape = input.shape();
         let (stride_h, stride_w) = self.effective_stride();
+        let (kernel_h, kernel_w) = self.kernel_size;
+        let (pad_h, pad_w) = self.padding;
 
         for batch in 0..input_shape[0] {
             for channel in 0..input_shape[1] {
                 for out_h in 0..output_shape[2] {
                     for out_w in 0..output_shape[3] {
-                        let in_h = out_h * stride_h;
-                        let in_w = out_w * stride_w;
+                        let mut sum = 0.0;
+                        let mut count = 0;
 
-                        if in_h < input_shape[2] && in_w < input_shape[3] {
-                            let input_idx =
-                                batch * input_shape[1] * input_shape[2] * input_shape[3]
-                                    + channel * input_shape[2] * input_shape[3]
-                                    + in_h * input_shape[3]
-                                    + in_w;
-                            let output_idx =
-                                batch * output_shape[1] * output_shape[2] * output_shape[3]
-                                    + channel * output_shape[2] * output_shape[3]
-                                    + out_h * output_shape[3]
-                                    + out_w;
+                        // Iterate over the pooling window
+                        for kh in 0..kernel_h {
+                            for kw in 0..kernel_w {
+                                let in_h = (out_h * stride_h + kh) as i32 - pad_h as i32;
+                                let in_w = (out_w * stride_w + kw) as i32 - pad_w as i32;
 
-                            if input_idx < input_data.len() && output_idx < output_data.len() {
-                                output_data[output_idx] = input_data[input_idx];
+                                // Check bounds
+                                if in_h >= 0
+                                    && in_w >= 0
+                                    && (in_h as usize) < input_shape[2]
+                                    && (in_w as usize) < input_shape[3]
+                                {
+                                    let input_idx =
+                                        batch * input_shape[1] * input_shape[2] * input_shape[3]
+                                            + channel * input_shape[2] * input_shape[3]
+                                            + (in_h as usize) * input_shape[3]
+                                            + (in_w as usize);
+
+                                    if input_idx < input_data.len() {
+                                        sum += input_data[input_idx];
+                                        count += 1;
+                                    }
+                                }
                             }
+                        }
+
+                        let output_idx =
+                            batch * output_shape[1] * output_shape[2] * output_shape[3]
+                                + channel * output_shape[2] * output_shape[3]
+                                + out_h * output_shape[3]
+                                + out_w;
+
+                        if output_idx < output_data.len() {
+                            output_data[output_idx] =
+                                if count > 0 { sum / count as f32 } else { 0.0 };
                         }
                     }
                 }
@@ -291,9 +400,85 @@ impl Layer for AvgPool2DLayer {
             .as_ref()
             .ok_or_else(|| NnlError::training("No cached input for backward pass"))?;
 
-        // Simplified backward pass - real implementation would compute proper gradients
-        // For now, just return gradient with same shape as input
-        let grad_input = grad_output.reshape(input.shape())?;
+        // Proper AvgPool2D backward pass
+        let input_shape = input.shape();
+        let grad_output_data = grad_output.to_vec()?;
+        let output_shape = grad_output.shape();
+
+        let mut grad_input_data = vec![0.0; input_shape.iter().product()];
+        let (stride_h, stride_w) = self.effective_stride();
+        let (kernel_h, kernel_w) = self.kernel_size;
+        let (pad_h, pad_w) = self.padding;
+
+        for batch in 0..input_shape[0] {
+            for channel in 0..input_shape[1] {
+                for out_h in 0..output_shape[2] {
+                    for out_w in 0..output_shape[3] {
+                        let grad_output_idx =
+                            batch * output_shape[1] * output_shape[2] * output_shape[3]
+                                + channel * output_shape[2] * output_shape[3]
+                                + out_h * output_shape[3]
+                                + out_w;
+
+                        if grad_output_idx < grad_output_data.len() {
+                            let grad_value = grad_output_data[grad_output_idx];
+                            let mut count = 0;
+
+                            // Count valid positions in the pooling window
+                            for kh in 0..kernel_h {
+                                for kw in 0..kernel_w {
+                                    let in_h = (out_h * stride_h + kh) as i32 - pad_h as i32;
+                                    let in_w = (out_w * stride_w + kw) as i32 - pad_w as i32;
+
+                                    if in_h >= 0
+                                        && in_w >= 0
+                                        && (in_h as usize) < input_shape[2]
+                                        && (in_w as usize) < input_shape[3]
+                                    {
+                                        count += 1;
+                                    }
+                                }
+                            }
+
+                            // Distribute gradient equally among all positions in the pooling window
+                            let distributed_grad = if count > 0 {
+                                grad_value / count as f32
+                            } else {
+                                0.0
+                            };
+
+                            for kh in 0..kernel_h {
+                                for kw in 0..kernel_w {
+                                    let in_h = (out_h * stride_h + kh) as i32 - pad_h as i32;
+                                    let in_w = (out_w * stride_w + kw) as i32 - pad_w as i32;
+
+                                    if in_h >= 0
+                                        && in_w >= 0
+                                        && (in_h as usize) < input_shape[2]
+                                        && (in_w as usize) < input_shape[3]
+                                    {
+                                        let grad_input_idx = batch
+                                            * input_shape[1]
+                                            * input_shape[2]
+                                            * input_shape[3]
+                                            + channel * input_shape[2] * input_shape[3]
+                                            + (in_h as usize) * input_shape[3]
+                                            + (in_w as usize);
+
+                                        if grad_input_idx < grad_input_data.len() {
+                                            grad_input_data[grad_input_idx] += distributed_grad;
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+
+        let grad_input =
+            Tensor::from_slice_on_device(&grad_input_data, input_shape, input.device().clone())?;
         Ok(grad_input)
     }
 
