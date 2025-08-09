@@ -401,6 +401,8 @@ pub struct LayerNormLayer {
     bias_grad: Option<Tensor>,
     /// Training mode flag
     training: bool,
+    /// Cached input for backward pass
+    cached_input: Option<Tensor>,
 }
 
 impl LayerNormLayer {
@@ -441,9 +443,10 @@ impl LayerNormLayer {
             elementwise_affine,
             weight,
             bias,
-            weight_grad,
-            bias_grad,
+            weight_grad: None,
+            bias_grad: None,
             training: true,
+            cached_input: None,
         })
     }
 }
@@ -452,17 +455,136 @@ impl Layer for LayerNormLayer {
     fn forward(&mut self, input: &Tensor, training: TrainingMode) -> Result<Tensor> {
         self.training = matches!(training, TrainingMode::Training);
 
-        // Simplified layer normalization - normalize last dimensions
-        let _input_data = input.to_vec()?;
-        let _input_shape = input.shape();
+        // Cache input for backward pass
+        if self.training {
+            self.cached_input = Some(input.clone_data()?);
+        }
 
-        // For now, just return input unchanged as placeholder
-        // Real implementation would normalize over the specified dimensions
-        Ok(input.clone_data()?)
+        // Proper layer normalization implementation
+        let input_data = input.to_vec()?;
+        let input_shape = input.shape();
+
+        if input_shape.len() < self.normalized_shape.len() {
+            return Err(NnlError::tensor(
+                "Input has fewer dimensions than normalized_shape",
+            ));
+        }
+
+        // Check if the last dimensions match normalized_shape
+        let input_tail = &input_shape[input_shape.len() - self.normalized_shape.len()..];
+        if input_tail != self.normalized_shape {
+            return Err(NnlError::shape_mismatch(&self.normalized_shape, input_tail));
+        }
+
+        let mut output_data = input_data.clone();
+
+        // Calculate dimensions
+        let normalized_size: usize = self.normalized_shape.iter().product();
+        let batch_size = input_data.len() / normalized_size;
+
+        // Normalize each sample
+        for batch in 0..batch_size {
+            let start_idx = batch * normalized_size;
+            let end_idx = start_idx + normalized_size;
+
+            if end_idx <= input_data.len() {
+                let slice = &input_data[start_idx..end_idx];
+
+                // Calculate mean
+                let mean = slice.iter().sum::<f32>() / normalized_size as f32;
+
+                // Calculate variance
+                let variance =
+                    slice.iter().map(|x| (x - mean).powi(2)).sum::<f32>() / normalized_size as f32;
+
+                // Apply normalization
+                for i in 0..normalized_size {
+                    let idx = start_idx + i;
+                    if idx < output_data.len() {
+                        output_data[idx] = (input_data[idx] - mean) / (variance + self.eps).sqrt();
+
+                        // Apply learnable parameters if present
+                        if self.elementwise_affine {
+                            if let Some(ref weight) = self.weight {
+                                let weight_data = weight.to_vec()?;
+                                if i < weight_data.len() {
+                                    output_data[idx] *= weight_data[i];
+                                }
+                            }
+
+                            if let Some(ref bias) = self.bias {
+                                let bias_data = bias.to_vec()?;
+                                if i < bias_data.len() {
+                                    output_data[idx] += bias_data[i];
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+
+        let output =
+            Tensor::from_slice_on_device(&output_data, input_shape, input.device().clone())?;
+        Ok(output)
     }
 
     fn backward(&mut self, grad_output: &Tensor) -> Result<Tensor> {
-        // Simplified backward pass
+        let input = self
+            .cached_input
+            .as_ref()
+            .ok_or_else(|| NnlError::training("No cached input for backward pass"))?;
+
+        // Simplified backward pass - proper implementation would compute gradients for normalization
+        // For now, just pass through gradients maintaining correct shapes
+        let grad_output_data = grad_output.to_vec()?;
+        let input_shape = input.shape();
+
+        // Store gradients for learnable parameters if present
+        if self.elementwise_affine {
+            let normalized_size: usize = self.normalized_shape.iter().product();
+
+            if self.weight.is_some() {
+                let mut weight_grad = vec![0.0; normalized_size];
+                let batch_size = grad_output_data.len() / normalized_size;
+
+                for batch in 0..batch_size {
+                    for i in 0..normalized_size {
+                        let idx = batch * normalized_size + i;
+                        if idx < grad_output_data.len() && i < weight_grad.len() {
+                            weight_grad[i] += grad_output_data[idx];
+                        }
+                    }
+                }
+
+                self.weight_grad = Some(Tensor::from_slice_on_device(
+                    &weight_grad,
+                    &self.normalized_shape,
+                    input.device().clone(),
+                )?);
+            }
+
+            if self.bias.is_some() {
+                let mut bias_grad = vec![0.0; normalized_size];
+                let batch_size = grad_output_data.len() / normalized_size;
+
+                for batch in 0..batch_size {
+                    for i in 0..normalized_size {
+                        let idx = batch * normalized_size + i;
+                        if idx < grad_output_data.len() && i < bias_grad.len() {
+                            bias_grad[i] += grad_output_data[idx];
+                        }
+                    }
+                }
+
+                self.bias_grad = Some(Tensor::from_slice_on_device(
+                    &bias_grad,
+                    &self.normalized_shape,
+                    input.device().clone(),
+                )?);
+            }
+        }
+
         Ok(grad_output.clone_data()?)
     }
 
