@@ -427,14 +427,12 @@ impl LayerNormLayer {
         }
 
         // Initialize learnable parameters if affine
-        let (weight, bias, weight_grad, bias_grad) = if elementwise_affine {
+        let (weight, bias) = if elementwise_affine {
             let weight = Tensor::ones_on_device(&normalized_shape, device.clone())?;
             let bias = Tensor::zeros_on_device(&normalized_shape, device.clone())?;
-            let weight_grad = Tensor::zeros_on_device(&normalized_shape, device.clone())?;
-            let bias_grad = Tensor::zeros_on_device(&normalized_shape, device)?;
-            (Some(weight), Some(bias), Some(weight_grad), Some(bias_grad))
+            (Some(weight), Some(bias))
         } else {
-            (None, None, None, None)
+            (None, None)
         };
 
         Ok(Self {
@@ -538,7 +536,6 @@ impl Layer for LayerNormLayer {
         // Simplified backward pass - proper implementation would compute gradients for normalization
         // For now, just pass through gradients maintaining correct shapes
         let grad_output_data = grad_output.to_vec()?;
-        let input_shape = input.shape();
 
         // Store gradients for learnable parameters if present
         if self.elementwise_affine {

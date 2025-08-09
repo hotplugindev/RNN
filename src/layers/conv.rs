@@ -345,7 +345,7 @@ impl Layer for Conv2DLayer {
         let output_width = grad_output_shape[3];
 
         let mut grad_input_data = vec![0.0; input_data.len()];
-        let mut grad_weights_data = vec![0.0; weights_data.len()];
+        let grad_weights_data = vec![0.0; weights_data.len()];
 
         let (kernel_h, kernel_w) = self.kernel_size;
         let (stride_h, stride_w) = self.stride;
