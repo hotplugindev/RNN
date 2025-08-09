@@ -14,6 +14,7 @@ use crate::optimizers::Optimizer;
 #[cfg(test)]
 use crate::optimizers::create_optimizer;
 use crate::tensor::Tensor;
+use rayon::prelude::*;
 use serde::{Deserialize, Serialize};
 
 use std::fmt;
